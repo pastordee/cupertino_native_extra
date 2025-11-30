@@ -757,6 +757,116 @@ class CNNativeSheet {
     }
   }
 
+  /// Shows a native sheet with custom Flutter widget header and content using UiKitView.
+  ///
+  /// Similar to `showWithCustomHeaderUiKitView` but allows the header (title/subtitle) to be
+  /// custom Flutter widgets instead of just strings. This gives you full flexibility to style
+  /// the header while maintaining the native iOS sheet presentation.
+  ///
+  /// **Features:**
+  /// - Native UISheetPresentationController (real iOS sheet)
+  /// - Custom Flutter widget header (title as a widget!)
+  /// - Custom Flutter widgets as content via UiKitView
+  /// - Non-modal behavior (interact with background)
+  /// - Native feel and animations
+  ///
+  /// **Example:**
+  /// ```dart
+  /// await CNNativeSheet.showWithCustomHeaderWidget(
+  ///   context: context,
+  ///   headerBuilder: (context) => Column(
+  ///     children: [
+  ///       Text('Format', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+  ///       Text('Text formatting options', style: TextStyle(fontSize: 13, color: Colors.grey)),
+  ///     ],
+  ///   ),
+  ///   contentBuilder: (context) => Column(
+  ///     children: [
+  ///       Row(
+  ///         children: [
+  ///           IconButton(icon: Icon(CupertinoIcons.bold), onPressed: () {}),
+  ///           IconButton(icon: Icon(CupertinoIcons.italic), onPressed: () {}),
+  ///         ],
+  ///       ),
+  ///     ],
+  ///   ),
+  ///   detents: [CNSheetDetent.custom(300)],
+  ///   isModal: false,
+  /// );
+  /// ```
+  static Future<void> showWithCustomHeaderWidget({
+    required BuildContext context,
+    required Widget Function(BuildContext) headerBuilder,
+    required Widget Function(BuildContext) contentBuilder,
+    List<CNSheetDetent> detents = const [CNSheetDetent.large],
+    bool prefersGrabberVisible = true,
+    bool isModal = false,
+    bool prefersEdgeAttachedInCompactHeight = false,
+    bool widthFollowsPreferredContentSizeWhenEdgeAttached = false,
+    double? preferredCornerRadius,
+    double? headerHeight,
+    Color? headerBackgroundColor,
+    bool showHeaderDivider = true,
+    Color? headerDividerColor,
+    VoidCallback? onClose,
+  }) async {
+    if (isModal) {
+      // For modal sheets, use CupertinoModalPopupRoute
+      await Navigator.of(context).push(
+        CupertinoModalPopupRoute(
+          builder: (context) => _NativeSheetWithCustomWidgetHeader(
+            headerBuilder: headerBuilder,
+            contentBuilder: contentBuilder,
+            detents: detents,
+            prefersGrabberVisible: prefersGrabberVisible,
+            isModal: isModal,
+            prefersEdgeAttachedInCompactHeight:
+                prefersEdgeAttachedInCompactHeight,
+            widthFollowsPreferredContentSizeWhenEdgeAttached:
+                widthFollowsPreferredContentSizeWhenEdgeAttached,
+            preferredCornerRadius: preferredCornerRadius,
+            headerHeight: headerHeight,
+            headerBackgroundColor: headerBackgroundColor,
+            showHeaderDivider: showHeaderDivider,
+            headerDividerColor: headerDividerColor,
+            onClose: onClose,
+          ),
+          barrierDismissible: false,
+          barrierColor: CupertinoColors.black.withOpacity(0.4),
+        ),
+      );
+    } else {
+      // For non-modal sheets, use Overlay to allow background interaction
+      final overlay = Overlay.of(context);
+      late OverlayEntry overlayEntry;
+      
+      overlayEntry = OverlayEntry(
+        builder: (context) => _NativeSheetWithCustomWidgetHeader(
+          headerBuilder: headerBuilder,
+          contentBuilder: contentBuilder,
+          detents: detents,
+          prefersGrabberVisible: prefersGrabberVisible,
+          isModal: isModal,
+          prefersEdgeAttachedInCompactHeight:
+              prefersEdgeAttachedInCompactHeight,
+          widthFollowsPreferredContentSizeWhenEdgeAttached:
+              widthFollowsPreferredContentSizeWhenEdgeAttached,
+          preferredCornerRadius: preferredCornerRadius,
+          headerHeight: headerHeight,
+          headerBackgroundColor: headerBackgroundColor,
+          showHeaderDivider: showHeaderDivider,
+          headerDividerColor: headerDividerColor,
+          onClose: () {
+            overlayEntry.remove();
+            onClose?.call();
+          },
+        ),
+      );
+      
+      overlay.insert(overlayEntry);
+    }
+  }
+
   // Helper to convert FontWeight to string for native side
   static String _fontWeightToString(FontWeight weight) {
     if (weight == FontWeight.w100) return 'ultraLight';
@@ -1116,6 +1226,129 @@ class _NativeSheetWithUiKitViewState extends State<_NativeSheetWithUiKitView> {
               // Custom Flutter content
               Expanded(
                 child: SingleChildScrollView(child: widget.builder(context)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A native sheet with custom Flutter widget header and content via UiKitView
+class _NativeSheetWithCustomWidgetHeader extends StatefulWidget {
+  final Widget Function(BuildContext) headerBuilder;
+  final Widget Function(BuildContext) contentBuilder;
+  final List<CNSheetDetent> detents;
+  final bool prefersGrabberVisible;
+  final bool isModal;
+  final bool prefersEdgeAttachedInCompactHeight;
+  final bool widthFollowsPreferredContentSizeWhenEdgeAttached;
+  final double? preferredCornerRadius;
+  final double? headerHeight;
+  final Color? headerBackgroundColor;
+  final bool showHeaderDivider;
+  final Color? headerDividerColor;
+  final VoidCallback? onClose;
+
+  const _NativeSheetWithCustomWidgetHeader({
+    required this.headerBuilder,
+    required this.contentBuilder,
+    required this.detents,
+    required this.prefersGrabberVisible,
+    required this.isModal,
+    required this.prefersEdgeAttachedInCompactHeight,
+    required this.widthFollowsPreferredContentSizeWhenEdgeAttached,
+    this.preferredCornerRadius,
+    this.headerHeight,
+    this.headerBackgroundColor,
+    required this.showHeaderDivider,
+    this.headerDividerColor,
+    this.onClose,
+  });
+
+  @override
+  State<_NativeSheetWithCustomWidgetHeader> createState() =>
+      _NativeSheetWithCustomWidgetHeaderState();
+}
+
+class _NativeSheetWithCustomWidgetHeaderState
+    extends State<_NativeSheetWithCustomWidgetHeader> {
+  double get _sheetHeight {
+    if (widget.detents.isEmpty) {
+      return MediaQuery.of(context).size.height * 0.5;
+    }
+
+    final firstDetent = widget.detents.first;
+    if (firstDetent.type == 'custom' && firstDetent.height != null) {
+      return firstDetent.height!;
+    } else if (firstDetent.type == 'medium') {
+      return MediaQuery.of(context).size.height * 0.5;
+    } else {
+      return MediaQuery.of(context).size.height * 0.9;
+    }
+  }
+
+  double get _headerHeight => widget.headerHeight ?? 56;
+
+  @override
+  Widget build(BuildContext context) {
+    final headerBgColor = widget.headerBackgroundColor ??
+        CupertinoTheme.of(context).scaffoldBackgroundColor;
+    final dividerColor = widget.headerDividerColor ??
+        CupertinoColors.separator.resolveFrom(context);
+
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        height: _sheetHeight,
+        decoration: BoxDecoration(
+          color: CupertinoTheme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+          boxShadow: [
+            BoxShadow(
+              color: CupertinoColors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+          child: Column(
+            children: [
+              // Custom Flutter widget header
+              Container(
+                height: _headerHeight,
+                color: headerBgColor,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: widget.headerBuilder(context)),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      minSize: 44,
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        widget.onClose?.call();
+                      },
+                      child: const Icon(CupertinoIcons.xmark),
+                    ),
+                  ],
+                ),
+              ),
+              // Divider
+              if (widget.showHeaderDivider)
+                Container(
+                  height: 0.5,
+                  color: dividerColor,
+                ),
+              // Custom Flutter content
+              Expanded(
+                child: SingleChildScrollView(
+                  child: widget.contentBuilder(context),
+                ),
               ),
             ],
           ),

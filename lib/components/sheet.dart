@@ -179,4 +179,40 @@ class CNSheet {
       closeButtonColor: closeButtonColor,
     );
   }
+
+  /// Shows a native sheet with custom Flutter widget header and content (delegates to CNNativeSheet)
+  static Future<void> showWithCustomHeaderWidget({
+    required context,
+    required Widget Function(BuildContext) headerBuilder,
+    required Widget Function(BuildContext) contentBuilder,
+    List<CNSheetDetent> detents = const [CNSheetDetent.large],
+    bool prefersGrabberVisible = true,
+    bool isModal = false,
+    bool prefersEdgeAttachedInCompactHeight = false,
+    bool widthFollowsPreferredContentSizeWhenEdgeAttached = false,
+    double? preferredCornerRadius,
+    double? headerHeight,
+    headerBackgroundColor,
+    bool showHeaderDivider = true,
+    headerDividerColor,
+    VoidCallback? onClose,
+  }) {
+    return CNNativeSheet.showWithCustomHeaderWidget(
+      context: context,
+      headerBuilder: headerBuilder,
+      contentBuilder: contentBuilder,
+      detents: detents,
+      prefersGrabberVisible: prefersGrabberVisible,
+      isModal: isModal,
+      prefersEdgeAttachedInCompactHeight: prefersEdgeAttachedInCompactHeight,
+      widthFollowsPreferredContentSizeWhenEdgeAttached:
+          widthFollowsPreferredContentSizeWhenEdgeAttached,
+      preferredCornerRadius: preferredCornerRadius,
+      headerHeight: headerHeight,
+      headerBackgroundColor: headerBackgroundColor,
+      showHeaderDivider: showHeaderDivider,
+      headerDividerColor: headerDividerColor,
+      onClose: onClose,
+    );
+  }
 }

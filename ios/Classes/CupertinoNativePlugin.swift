@@ -6,6 +6,9 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
   private static var alertHandler: CupertinoAlertHandler?
   private static var sheetHandler: CupertinoSheetHandler?
   private static var customSheetHandler: CupertinoCustomSheetHandler?
+  private static var searchControllerHandler: CupertinoSearchControllerHandler?
+  @available(iOS 15.0, *)
+  private static var ios26SearchTabBarHandler: IOS26SearchTabBarHandler?
   
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "cupertino_native", binaryMessenger: registrar.messenger())
@@ -69,6 +72,11 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
         alertHandler = CupertinoAlertHandler(messenger: registrar.messenger(), viewController: rootViewController)
         sheetHandler = CupertinoSheetHandler(messenger: registrar.messenger(), viewController: rootViewController)
         customSheetHandler = CupertinoCustomSheetHandler(messenger: registrar.messenger(), viewController: rootViewController)
+        searchControllerHandler = CupertinoSearchControllerHandler(messenger: registrar.messenger(), viewController: rootViewController)
+        
+        if #available(iOS 15.0, *) {
+          ios26SearchTabBarHandler = IOS26SearchTabBarHandler(messenger: registrar.messenger(), viewController: rootViewController)
+        }
       }
     }
   }

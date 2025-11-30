@@ -19,6 +19,7 @@ class CNSearchConfig {
     this.showsCancelButton = true,
     this.animationDuration = const Duration(milliseconds: 300),
     this.searchBarHeight = 50.0,
+    this.onSearchActivated,
     this.onSearchTextChanged,
     this.onSearchSubmitted,
     this.onSearchCancelled,
@@ -40,6 +41,9 @@ class CNSearchConfig {
 
   /// Height of the search bar when expanded.
   final double searchBarHeight;
+
+  /// Called when search bar is activated/focused (tapped).
+  final VoidCallback? onSearchActivated;
 
   /// Called when search text changes.
   final ValueChanged<String>? onSearchTextChanged;

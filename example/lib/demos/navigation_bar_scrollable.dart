@@ -18,6 +18,13 @@ class NavigationBarScrollableDemoPage extends StatefulWidget {
 class _NavigationBarScrollableDemoPageState
     extends State<NavigationBarScrollableDemoPage> {
   int _currentIndex = 0;
+  final _searchController = CNNativeSearchController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +63,9 @@ class _NavigationBarScrollableDemoPageState
           child: CNTabBar.search(
             currentIndex: _currentIndex,
             onTap: (index) {
+              print('Tab tapped: index = $index');
+              
+              // For non-search tabs, update the current index
               setState(() {
                 _currentIndex = index;
               });
@@ -63,14 +73,29 @@ class _NavigationBarScrollableDemoPageState
             },
             items: [
               CNTabBarItem(icon: CNSymbol('house.fill'), label: 'Home'),
-
               CNTabBarItem(icon: CNSymbol('bell.fill'), label: 'Notifications'),
               CNTabBarItem(icon: CNSymbol('person.fill'), label: 'Profile'),
             ],
             searchConfig: CNSearchConfig(
               placeholder: 'Search music...',
+              onSearchActivated: () {
+                print('Search bar activated - opening native search controller');
+                // Open native search controller when search bar is activated
+                _searchController.show(
+                  placeholder: 'Search music...',
+                  onTextChanged: (query) {
+                    print('Native search text: $query');
+                  },
+                  onSubmitted: (query) {
+                    print('Native search submitted: $query');
+                  },
+                  onCancelled: () {
+                    print('Native search cancelled');
+                  },
+                );
+              },
               onSearchTextChanged: (text) {
-                print('Searching: $text');
+                print('Search text changed: $text');
               },
             ),
             split: true,

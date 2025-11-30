@@ -765,6 +765,8 @@ class _CNTabBarSearchState extends State<CNTabBar>
       _isSearchExpanded = true;
     });
     _animationController.forward();
+    // Call onSearchActivated callback
+    widget.searchConfig!.onSearchActivated?.call();
   }
 
   void _collapseSearch() {

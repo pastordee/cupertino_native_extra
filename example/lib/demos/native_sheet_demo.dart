@@ -75,6 +75,26 @@ class _NativeSheetDemoPageState extends State<NativeSheetDemoPage> {
                   'True nonmodal - tap styles without closing! Background stays interactive.',
               onTap: () => _showNonmodalSheet(),
             ),
+            const SizedBox(height: 16),
+
+            // Sheet Example 5: Custom Flutter Widget Sheet
+            _buildSectionHeader('Custom Flutter Widget Sheet'),
+            _buildExampleCard(
+              title: 'Widget Content',
+              description:
+                  'Native header with custom Flutter widgets as content',
+              onTap: () => _showCustomWidgetSheet(),
+            ),
+            const SizedBox(height: 16),
+
+            // Sheet Example 6: Custom Widget Header Sheet
+            _buildSectionHeader('Custom Widget Header Sheet'),
+            _buildExampleCard(
+              title: 'Widget Header + Content',
+              description:
+                  'Both header AND content as custom Flutter widgets',
+              onTap: () => _showCustomHeaderWidgetSheet(),
+            ),
             const SizedBox(height: 24),
 
             // Status display
@@ -325,6 +345,8 @@ class _NativeSheetDemoPageState extends State<NativeSheetDemoPage> {
     final result = await CNSheet.showWithCustomHeader(
       context: context,
       title: 'Format',
+      subtitle: 'Background remains interactive',
+      headerTitleAlignment: 'center',
       message:
           'Tap styles to apply formatting. Background remains interactive!',
       items: [
@@ -419,5 +441,241 @@ class _NativeSheetDemoPageState extends State<NativeSheetDemoPage> {
     if (result == null) {
       setState(() => _lastAction = 'Format sheet closed');
     }
+  }
+
+  /// Example 5: Custom Flutter Widget Sheet
+  /// Uses native header with UiKitView to render Flutter widgets as content
+  Future<void> _showCustomWidgetSheet() async {
+    await CNSheet.showWithCustomHeaderUiKitView(
+      context: context,
+      title: 'Custom Content',
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'This is Flutter Widget Content',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey6.resolveFrom(context),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'You can put any Flutter widgets here!\n\n'
+                  '• Custom layouts\n'
+                  '• Complex widgets\n'
+                  '• Interactive elements\n'
+                  '• Images and animations',
+                  style: TextStyle(fontSize: 15, height: 1.6),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Example of interactive content
+              Center(
+                child: CupertinoButton(
+                  color: CupertinoColors.activeBlue.resolveFrom(context),
+                  onPressed: () {
+                    setState(() => _lastAction = 'Button tapped in custom widget sheet');
+                  },
+                  child: const Text('Tap Me!'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Custom grid example
+              GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                children: List.generate(
+                  9,
+                  (index) => Container(
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.activeBlue.resolveFrom(context),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${index + 1}',
+                        style: const TextStyle(
+                          color: CupertinoColors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      detents: [CNSheetDetent.custom(500)],
+      prefersGrabberVisible: true,
+      isModal: false,
+      headerHeight: 56,
+      headerTitleWeight: FontWeight.w600,
+      closeButtonIcon: 'xmark',
+      closeButtonColor: CupertinoColors.label.resolveFrom(context),
+    );
+    setState(() => _lastAction = 'Custom widget sheet closed');
+  }
+
+  /// Example 6: Custom Widget Header Sheet
+  /// Uses custom Flutter widgets for BOTH header and content
+  Future<void> _showCustomHeaderWidgetSheet() async {
+    await CNSheet.showWithCustomHeaderWidget(
+      context: context,
+      headerBuilder: (context) => Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Advanced Options',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Customize your experience',
+            style: TextStyle(
+              fontSize: 13,
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+            ),
+          ),
+        ],
+      ),
+      contentBuilder: (context) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Settings group
+            Text(
+              'APPEARANCE',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                letterSpacing: -0.08,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildSettingItem(
+              context,
+              icon: CupertinoIcons.sun_max,
+              title: 'Theme',
+              subtitle: 'Light & Dark',
+            ),
+            _buildSettingItem(
+              context,
+              icon: CupertinoIcons.textformat,
+              title: 'Text Size',
+              subtitle: 'Adjust for readability',
+            ),
+            const SizedBox(height: 24),
+            
+            // Preferences group
+            Text(
+              'PREFERENCES',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                letterSpacing: -0.08,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildSettingItem(
+              context,
+              icon: CupertinoIcons.bell,
+              title: 'Notifications',
+              subtitle: 'Enable alerts',
+              trailing: CupertinoSwitch(
+                value: true,
+                onChanged: (value) {},
+              ),
+            ),
+            _buildSettingItem(
+              context,
+              icon: CupertinoIcons.lock,
+              title: 'Privacy',
+              subtitle: 'Control data sharing',
+            ),
+          ],
+        ),
+      ),
+      detents: [CNSheetDetent.custom(450)],
+      prefersGrabberVisible: true,
+      isModal: false,
+      headerHeight: 80,
+      headerBackgroundColor: CupertinoColors.systemBackground
+          .resolveFrom(context)
+          .withOpacity(0.95),
+      showHeaderDivider: true,
+    );
+    setState(() => _lastAction = 'Custom header widget sheet closed');
+  }
+
+  /// Helper widget for settings items
+  Widget _buildSettingItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    Widget? trailing,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: CupertinoColors.secondarySystemBackground.resolveFrom(context),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 24,
+            color: CupertinoColors.activeBlue.resolveFrom(context),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
   }
 }

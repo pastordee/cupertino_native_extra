@@ -17,6 +17,7 @@ import 'demos/navigation_bar_demo.dart';
 import 'demos/navigation_bar_scrollable.dart';
 import 'demos/toolbar.dart';
 import 'demos/native_search_bar.dart';
+import 'demos/native_search_controller_demo.dart';
 import 'demos/action_sheet.dart';
 import 'demos/native_sheet_demo.dart';
 import 'demos/custom_sheet_demo.dart';
@@ -26,6 +27,7 @@ import 'demos/sheet_custom_styling.dart';
 import 'demos/notes_format_sheet_demo.dart';
 import 'demos/simple_search_demo.dart';
 import 'demos/tabbar_only_demo.dart';
+import 'demos/ios26_search_tab_bar_demo.dart';
 
 void main() {
   runApp(const MyApp());
@@ -374,6 +376,38 @@ class HomePage extends StatelessWidget {
                   Navigator.of(context).push(
                     CupertinoPageRoute(
                       builder: (_) => const NativeSearchBarDemoPage(),
+                    ),
+                  );
+                },
+              ),
+              CupertinoListTile(
+                title: Text('Native Search Controller'),
+                leading: CNIcon(
+                  symbol: CNSymbol(
+                    'magnifyingglass',
+                    color: accentColor,
+                  ),
+                ),
+                trailing: CupertinoListTileChevron(),
+                onTap: () {
+                  Navigator.of(context).push(
+                    CupertinoPageRoute(
+                      builder: (_) => const NativeSearchControllerDemo(),
+                    ),
+                  );
+                },
+              ),
+              CupertinoListTile(
+                title: Text('iOS 26+ Native Tab Bar'),
+                subtitle: Text('EXPERIMENTAL'),
+                leading: CNIcon(
+                  symbol: CNSymbol('rectangle.3.offgrid', color: accentColor),
+                ),
+                trailing: CupertinoListTileChevron(),
+                onTap: () {
+                  Navigator.of(context).push(
+                    CupertinoPageRoute(
+                      builder: (_) => const IOS26SearchTabBarDemoPage(),
                     ),
                   );
                 },

@@ -18,6 +18,8 @@ export 'components/transforming_toolbar.dart';
 export 'components/search_field.dart';
 export 'components/search_bar.dart';
 export 'components/search_config.dart'; // Search configuration
+export 'components/native_search_controller.dart'; // Native fullscreen search
+export 'components/ios26_native_search_tab_bar.dart'; // iOS 26+ native tab bar (Option B)
 export 'components/action_sheet.dart';
 export 'components/alert.dart';
 export 'components/sheet.dart'; // Exports both native_sheet and custom_sheet
