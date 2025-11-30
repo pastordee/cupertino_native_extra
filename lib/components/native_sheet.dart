@@ -160,6 +160,7 @@ class CNSheetInlineAction {
   final String icon;
   final bool enabled;
   final bool isToggled;
+  final bool dismissOnTap;
   final Color? backgroundColor;
   final double? width;
   final double? iconSize;
@@ -173,6 +174,7 @@ class CNSheetInlineAction {
   /// [icon] - SF Symbol icon name
   /// [enabled] - Whether the action can be tapped
   /// [isToggled] - Whether the action appears in selected/highlighted state
+  /// [dismissOnTap] - Whether tapping this action dismisses the sheet (default: true)
   /// [backgroundColor] - Optional custom background color for this action button
   /// [width] - Custom width for this button (default: 70)
   /// [iconSize] - Size of the SF Symbol icon (default: 24)
@@ -184,6 +186,7 @@ class CNSheetInlineAction {
     required this.icon,
     this.enabled = true,
     this.isToggled = false,
+    this.dismissOnTap = true,
     this.backgroundColor,
     this.width,
     this.iconSize,
@@ -512,6 +515,7 @@ class CNNativeSheet {
             'icon': action.icon,
             'enabled': action.enabled,
             'isToggled': action.isToggled,
+            'dismissOnTap': action.dismissOnTap,
           };
           // Add backgroundColor if provided (convert to ARGB int)
           if (action.backgroundColor != null) {
