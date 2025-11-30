@@ -923,6 +923,19 @@ class CupertinoCustomSheetViewController: UIViewController, UISheetPresentationC
             "rowIndex": rowIndex,
             "actionIndex": actionIndex
         ])
+        
+        // Check if this action should dismiss the sheet
+        if rowIndex < inlineActions.count,
+           let actionGroup = inlineActions[rowIndex] as? [String: Any],
+           let actions = actionGroup["actions"] as? [[String: Any]],
+           actionIndex < actions.count,
+           let action = actions[actionIndex] as? [String: Any] {
+            
+            let dismissOnTap = action["dismissOnTap"] as? Bool ?? true
+            if dismissOnTap {
+                dismiss(animated: true)
+            }
+        }
     }
     
     @objc private func itemTapped(_ sender: Any) {

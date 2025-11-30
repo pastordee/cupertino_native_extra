@@ -40,7 +40,7 @@ class _IOS26SearchTabBarDemoPageState extends State<IOS26SearchTabBarDemoPage> {
     super.dispose();
   }
 
-  @override§
+  @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(

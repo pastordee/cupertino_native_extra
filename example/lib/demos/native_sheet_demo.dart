@@ -374,6 +374,7 @@ class _NativeSheetDemoPageState extends State<NativeSheetDemoPage> {
             CNSheetInlineAction(
               label: 'I',
               icon: 'italic',
+              dismissOnTap: false
             ),
             CNSheetInlineAction(
               label: 'U',
