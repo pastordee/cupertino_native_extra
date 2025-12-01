@@ -49,13 +49,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
-  cupertino_native:
+  cupertino_native_extra:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "0.1.5+9"
+    version: "0.2.0"
   fake_async:
     dependency: transitive
     description:

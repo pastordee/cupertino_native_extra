@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:cupertino_native/cupertino_native.dart';
+import 'package:cupertino_native_extra/cupertino_native.dart';
 
 /// Standalone demo page with ONLY CNTabBar.search() to isolate issues
 class TabBarOnlyDemoPage extends StatefulWidget {

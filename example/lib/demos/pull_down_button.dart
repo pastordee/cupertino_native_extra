@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:cupertino_native/cupertino_native.dart';
+import 'package:cupertino_native_extra/cupertino_native.dart';
 
 /// Demo page showing CNPullDownButton functionality.
 class PullDownButtonDemo extends StatefulWidget {

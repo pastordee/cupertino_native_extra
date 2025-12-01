@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:cupertino_native/cupertino_native.dart';
+import 'package:cupertino_native_extra/cupertino_native.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class MockCupertinoNativePlatform

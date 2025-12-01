@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:cupertino_native/cupertino_native.dart';
+import 'package:cupertino_native_extra/cupertino_native.dart';
 
 class ToolbarDemoPage extends StatefulWidget {
   const ToolbarDemoPage({super.key});

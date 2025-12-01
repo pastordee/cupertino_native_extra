@@ -3,8 +3,8 @@
 # Run `pod lib lint cupertino_native.podspec` to validate before publishing.
 #
 Pod::Spec.new do |s|
-  s.name             = 'cupertino_native'
-  s.version          = '0.0.1'
+  s.name             = 'cupertino_native_extra'
+  s.version          = '0.2.0'
   s.summary          = 'A new Flutter plugin project.'
   s.description      = <<-DESC
 A new Flutter plugin project.
