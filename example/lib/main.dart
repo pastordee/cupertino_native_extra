@@ -7,7 +7,6 @@ import 'demos/tab_bar.dart';
 import 'demos/icon.dart';
 import 'demos/popup_menu_button.dart';
 import 'demos/popup_menu_demo.dart';
-import 'demos/popup_menu_styles_demo.dart';
 import 'demos/pull_down_button.dart';
 import 'demos/pull_down_button_anchor_demo.dart';
 import 'demos/popup_button_demo.dart';
@@ -17,17 +16,8 @@ import 'demos/navigation_bar_demo.dart';
 import 'demos/navigation_bar_scrollable.dart';
 import 'demos/toolbar.dart';
 import 'demos/native_search_bar.dart';
-import 'demos/native_search_controller_demo.dart';
 import 'demos/action_sheet.dart';
 import 'demos/native_sheet_demo.dart';
-import 'demos/custom_sheet_demo.dart';
-import 'demos/sheet_custom_content.dart';
-import 'demos/sheet_uikit_view.dart';
-import 'demos/sheet_custom_styling.dart';
-import 'demos/notes_format_sheet_demo.dart';
-import 'demos/simple_search_demo.dart';
-import 'demos/tabbar_only_demo.dart';
-import 'demos/ios26_search_tab_bar_demo.dart';
 
 void main() {
   runApp(const MyApp());
@@ -221,20 +211,7 @@ class HomePage extends StatelessWidget {
                   );
                 },
               ),
-              CupertinoListTile(
-                title: Text('Popup Menu Styles'),
-                leading: CNIcon(
-                  symbol: CNSymbol('ellipsis.circle', color: accentColor),
-                ),
-                trailing: CupertinoListTileChevron(),
-                onTap: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => const PopupMenuStylesDemo(),
-                    ),
-                  );
-                },
-              ),
+              
               CupertinoListTile(
                 title: Text('Pull-Down Button'),
                 leading: CNIcon(
@@ -380,68 +357,10 @@ class HomePage extends StatelessWidget {
                   );
                 },
               ),
-              CupertinoListTile(
-                title: Text('Native Search Controller'),
-                leading: CNIcon(
-                  symbol: CNSymbol(
-                    'magnifyingglass',
-                    color: accentColor,
-                  ),
-                ),
-                trailing: CupertinoListTileChevron(),
-                onTap: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => const NativeSearchControllerDemo(),
-                    ),
-                  );
-                },
-              ),
-              CupertinoListTile(
-                title: Text('iOS 26+ Native Tab Bar'),
-                subtitle: Text('EXPERIMENTAL'),
-                leading: CNIcon(
-                  symbol: CNSymbol('rectangle.3.offgrid', color: accentColor),
-                ),
-                trailing: CupertinoListTileChevron(),
-                onTap: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => const IOS26SearchTabBarDemoPage(),
-                    ),
-                  );
-                },
-              ),
-              CupertinoListTile(
-                title: Text('Search Integration'),
-                subtitle: Text('CNToolbar / CNNavigationBar / CNTabBar'),
-                leading: CNIcon(
-                  symbol: CNSymbol('magnifyingglass', color: accentColor),
-                ),
-                trailing: CupertinoListTileChevron(),
-                onTap: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => const SimpleSearchDemoPage(),
-                    ),
-                  );
-                },
-              ),
-              CupertinoListTile(
-                title: Text('Tab Bar Only (Debug)'),
-                subtitle: Text('Isolated CNTabBar.search() test'),
-                leading: CNIcon(
-                  symbol: CNSymbol('square.grid.2x2', color: accentColor),
-                ),
-                trailing: CupertinoListTileChevron(),
-                onTap: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => const TabBarOnlyDemoPage(),
-                    ),
-                  );
-                },
-              ),
+              
+
+
+
               CupertinoListTile(
                 title: Text('Action Sheet'),
                 leading: CNIcon(
@@ -474,97 +393,11 @@ class HomePage extends StatelessWidget {
                   );
                 },
               ),
-              CupertinoListTile(
-                title: Text('Custom Widget Sheets'),
-                subtitle: Text('Flutter overlay rendering'),
-                leading: CNIcon(
-                  symbol: CNSymbol(
-                    'square.stack.3d.down.right',
-                    color: accentColor,
-                  ),
-                ),
-                trailing: CupertinoListTileChevron(),
-                onTap: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => const CustomSheetDemoPage(),
-                    ),
-                  );
-                },
-              ),
-              CupertinoListTile(
-                title: Text('Custom Content Sheet'),
-                subtitle: Text('Non-modal sheet with Flutter widgets'),
-                leading: CNIcon(
-                  symbol: CNSymbol(
-                    'pencil.and.list.clipboard',
-                    color: accentColor,
-                  ),
-                ),
-                trailing: CupertinoListTileChevron(),
-                onTap: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => const SheetCustomContentDemoPage(),
-                    ),
-                  );
-                },
-              ),
-              CupertinoListTile(
-                title: Text(
-                  '🎉 Ultimate Goal - Native chrome + Flutter content',
-                ),
-                leading: CNIcon(
-                  symbol: CNSymbol(
-                    'star.circle.fill',
-                    color: CupertinoColors.systemGreen,
-                  ),
-                ),
-                trailing: CupertinoListTileChevron(),
-                onTap: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => const SheetUiKitViewDemoPage(),
-                    ),
-                  );
-                },
-              ),
-              CupertinoListTile(
-                title: Text('Notes Format Sheet'),
-                subtitle: Text('Non-modal sheet with inline actions'),
-                leading: CNIcon(
-                  symbol: CNSymbol(
-                    'doc.text.fill',
-                    color: CupertinoColors.systemYellow,
-                  ),
-                ),
-                trailing: CupertinoListTileChevron(),
-                onTap: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => const NotesFormatSheetDemo(),
-                    ),
-                  );
-                },
-              ),
-              CupertinoListTile(
-                title: Text('Sheet Custom Styling'),
-                subtitle: Text('Advanced customization options'),
-                leading: CNIcon(
-                  symbol: CNSymbol(
-                    'paintbrush.fill',
-                    color: CupertinoColors.systemPurple,
-                  ),
-                ),
-                trailing: CupertinoListTileChevron(),
-                onTap: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => const SheetCustomStylingDemoPage(),
-                    ),
-                  );
-                },
-              ),
+              
+              
+              
+             
+             
             ],
           ),
         ],
