@@ -523,9 +523,6 @@ class _CNPullDownButtonState extends State<CNPullDownButton> {
     ch.setMethodCallHandler(_onMethodCall);
     _lastTint = resolveColorToArgb(_effectiveTint, context);
     _lastIsDark = _isDark;
-    _lastTitle = widget.buttonLabel;
-    _lastIconName = widget.buttonIcon?.name;
-    _lastIconSize = widget.buttonIcon?.size;
     _lastIconColor = resolveColorToArgb(widget.buttonIcon?.color, context);
     _lastStyle = widget.buttonStyle;
     if (!widget.isIconButton) {
