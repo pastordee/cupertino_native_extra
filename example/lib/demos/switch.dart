@@ -1,8 +1,32 @@
 import 'package:flutter/cupertino.dart';
 import 'package:cupertino_native_extra/cupertino_native.dart';
 
+/// Demo page showcasing CNSwitch - a native iOS toggle switch.
+/// 
+/// Features demonstrated:
+/// - On/off toggle with native UISwitch rendering
+/// - Custom tint colors for visual variety
+/// - Disabled state for non-interactive UI
+/// - Real-time state feedback
+/// 
+/// Best practices:
+/// - Use for binary choices (on/off, enabled/disabled)
+/// - Ideal for settings and feature toggles
+/// - Provides immediate visual feedback
+/// - No confirmation needed unlike buttons
 class SwitchDemoPage extends StatefulWidget {
   const SwitchDemoPage({super.key});
+/// Demo page showcasing CNSwitch - a native iOS toggle switch control.
+/// 
+/// Features demonstrated:
+/// - Basic on/off toggle functionality
+/// - Custom tint colors (e.g., systemPink for theme customization)
+/// - Disabled state for non-interactive UI
+/// - Native iOS UISwitch rendering with hardware acceleration
+/// 
+/// Switches are ideal for binary choices (on/off, enabled/disabled).
+/// Use for settings, permissions, and feature toggles that require
+/// immediate feedback without confirmation.
 
   @override
   State<SwitchDemoPage> createState() => _SwitchDemoPageState();

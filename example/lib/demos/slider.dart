@@ -1,6 +1,17 @@
 import 'package:flutter/cupertino.dart';
 import 'package:cupertino_native_extra/cupertino_native.dart';
 
+/// Demo page showcasing CNSlider - a native iOS slider control.
+/// 
+/// Features demonstrated:
+/// - Basic value selection (0-100)
+/// - Step intervals for discrete value selection
+/// - Custom tint colors
+/// - Disabled state
+/// - Real-time value feedback
+/// 
+/// The CNSlider provides a native iOS UISlider experience with full support
+/// for iOS design patterns and accessibility features.
 class SliderDemoPage extends StatefulWidget {
   const SliderDemoPage({super.key});
 

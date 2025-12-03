@@ -1,4 +1,81 @@
-// Public exports and convenience API for the plugin.
+/// Cupertino Native Extra - Native iOS widgets for Flutter
+///
+/// This plugin provides pixel-perfect native iOS widgets with liquid glass
+/// effects, using native UIKit rendering for authentic Apple design language
+/// implementation. All widgets support dark mode and iOS 14+ features.
+///
+/// ## Quick Start
+///
+/// Import the package:
+/// ```dart
+/// import 'package:cupertino_native_extra/cupertino_native.dart';
+/// ```
+///
+/// ## Core Components
+///
+/// ### Navigation
+/// - [CNNavigationBar] - Native iOS navigation bar with blur effect
+/// - [CNNavigationBar.scrollable] - Large title with smooth collapse animation
+/// - [CNToolbar] - Native iOS toolbar for top/bottom placement
+///
+/// ### Controls
+/// - [CNButton] - 8 native iOS button styles
+/// - [CNSlider] - Native iOS slider with step support
+/// - [CNSwitch] - Native toggle switch
+/// - [CNSegmentedControl] - Native segmented control
+///
+/// ### Menus & Popups
+/// - [CNPopupMenuButton] - Context menu from button
+/// - [CNPopupButton] - Dropdown selection menu
+/// - [CNPullDownButton] - Pull-down menu (iOS 13+)
+/// - [CNPullDownButtonAnchor] - Anchored popup menu (iOS 14+)
+///
+/// ### Pickers & Search
+/// - [CNTabBar] - Native tab bar with badges
+/// - [CNSearchBar] - Native search bar with scope
+/// - [CNNativeSearchController] - Fullscreen search (iOS 16+)
+///
+/// ### Sheets & Dialogs
+/// - [CNActionSheet] - Native action sheet/menu
+/// - [CNAlert] - Native alert dialog
+/// - [CNSheet] - Native bottom sheet with detents
+///
+/// ### Styling
+/// - [CNIcon] - SF Symbols with rendering modes
+/// - [CNSymbol] - SF Symbol description
+/// - [CNButtonStyle] - 8 button style options
+///
+/// ## Key Features
+///
+/// - **Pixel-Perfect**: True native UIKit rendering
+/// - **Liquid Glass**: Frosted glass blur effects
+/// - **Dark Mode**: Full light/dark mode support
+/// - **Accessibility**: Native accessibility integration
+/// - **Performance**: Hardware-accelerated animations
+/// - **Type-Safe**: Full Dart type safety
+///
+/// ## Platform Support
+///
+/// - iOS 14.0+
+/// - macOS 11.0+
+///
+/// ## Architecture
+///
+/// The plugin uses:
+/// - Platform channels for Swift/Objective-C communication
+/// - UIKit/AppKit for native rendering
+/// - Method channels for configuration
+/// - PlatformView for widget embedding
+///
+/// ## Example
+///
+/// ```dart
+/// CNButton(
+///   label: 'Save',
+///   style: CNButtonStyle.filled,
+///   onPressed: () => print('Tapped'),
+/// )
+/// ```
 
 export 'cupertino_native_platform_interface.dart';
 export 'cupertino_native_method_channel.dart';

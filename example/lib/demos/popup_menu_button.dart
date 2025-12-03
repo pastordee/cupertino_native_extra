@@ -1,6 +1,35 @@
 import 'package:cupertino_native_extra/cupertino_native.dart';
 import 'package:flutter/cupertino.dart';
 
+/// Demo page showcasing CNPopupMenuButton - native iOS popup menus.
+/// 
+/// Features demonstrated:
+/// - Text button variant (labeled menu trigger)
+/// - Icon button variant (compact, space-efficient)
+/// - Menu items with labels and SF Symbol icons
+/// - Menu dividers for logical grouping
+/// - Disabled menu items (grayed out)
+/// - Selection index callback
+/// - Multiple button styles support
+/// 
+/// Use CNPopupMenuButton when:
+/// - You need 3-10 related action options
+/// - Space is limited (icon variant)
+/// - Menu items are context-specific
+/// - You want traditional menu appearance
+/// 
+/// Structure best practices:
+/// - Most common actions first
+/// - Use dividers to group 3-5 related items
+/// - Destructive actions at bottom or separated
+/// - Keep menu items under 6-8 words each
+/// - Use clear, action-oriented labels
+/// 
+/// Example use cases:
+/// - File operations (New, Open, Save, Delete)
+/// - Edit operations (Cut, Copy, Paste, Delete)
+/// - View options (Sort, Filter, Refresh)
+/// - Account actions (Settings, Help, Logout)
 class PopupMenuButtonDemoPage extends StatefulWidget {
   const PopupMenuButtonDemoPage({super.key});
 

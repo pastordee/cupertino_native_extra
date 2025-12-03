@@ -1,6 +1,31 @@
 import 'package:flutter/cupertino.dart';
 import 'package:cupertino_native_extra/cupertino_native.dart';
 
+/// Demo page showcasing CNIcon - native iOS SF Symbol icons.
+/// 
+/// Features demonstrated:
+/// - SF Symbols system icons from Apple's library
+/// - Multiple rendering modes:
+///   - Monochrome: Single color (traditional)
+///   - Hierarchical: Layered with emphasis levels
+///   - Multicolor: Full color palette
+/// - Custom sizing from small (12pt) to large (40pt)
+/// - Color customization per mode
+/// - Size variations for different UI contexts
+/// 
+/// SF Symbols benefits:
+/// - 4500+ professionally designed icons
+/// - Consistent across Apple platforms
+/// - Automatic baseline and sizing
+/// - Built-in accessibility support
+/// - Weight variations (light, regular, semibold, bold)
+/// 
+/// Best practices:
+/// - Use standard symbol names from SF Symbols app
+/// - Match icon size to context (toolbar: 18-20pt, nav: 24-28pt)
+/// - Monochrome for traditional UI
+/// - Hierarchical for depth
+/// - Multicolor for decorative/branded icons
 class IconDemoPage extends StatelessWidget {
   const IconDemoPage({super.key});
 

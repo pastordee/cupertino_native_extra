@@ -1,6 +1,23 @@
 import 'package:flutter/cupertino.dart';
 import 'package:cupertino_native_extra/cupertino_native.dart';
 
+/// Demo page showcasing CNSegmentedControl - a native iOS segmented control.
+/// 
+/// Features demonstrated:
+/// - Multiple text-based options (One, Two, Three)
+/// - Colored segments with custom tint
+/// - Shrink wrap to fit content width
+/// - Icon-only segments using SF Symbols
+/// - Icon rendering modes (hierarchical, etc.)
+/// - Height customization
+/// 
+/// Use cases:
+/// - 2-5 mutually exclusive options
+/// - Quick filtering or view mode switching
+/// - Visible, accessible control options
+/// - Space-efficient UI
+/// 
+/// Tip: For more options, consider CNPopupButton instead.
 class SegmentedControlDemoPage extends StatefulWidget {
   const SegmentedControlDemoPage({super.key});
 

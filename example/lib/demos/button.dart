@@ -1,6 +1,35 @@
 import 'package:cupertino_native_extra/cupertino_native.dart';
 import 'package:flutter/cupertino.dart';
 
+/// Demo page showcasing CNButton - native iOS buttons with 8 styles.
+/// 
+/// Features demonstrated:
+/// - 8 button styles following Apple iOS HIG:
+///   1. Plain: Minimal emphasis for secondary actions
+///   2. Gray: Subtle background, tertiary actions
+///   3. Tinted: Moderate emphasis using accent color
+///   4. Bordered: Clear container for important actions
+///   5. BorderedProminent: High emphasis bordered style
+///   6. Filled: Primary action with solid color
+///   7. Glass: Modern frosted glass effect
+///   8. ProminentGlass: High emphasis glass style
+/// - Text and icon button variants
+/// - Shrink wrap for compact layouts
+/// - Disabled state support
+/// - Custom callbacks for interactions
+/// 
+/// Design guidance:
+/// - Use prominent styles (filled, borderedProminent) for primary CTAs
+/// - Use plain or gray for secondary/tertiary options
+/// - Use glass styles for modern, premium feel
+/// - Always disable instead of hiding unavailable buttons
+/// - Label buttons with clear action verbs (Save, Delete, etc.)
+/// 
+/// Apple HIG recommendations:
+/// - One primary button per screen
+/// - Consistent sizing in groups
+/// - Adequate touch targets (44pt minimum)
+/// - Clear hierarchy with visual weight
 class ButtonDemoPage extends StatefulWidget {
   const ButtonDemoPage({super.key});
 
