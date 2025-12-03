@@ -194,9 +194,6 @@ class _CNPullDownButtonState extends State<CNPullDownButton> {
   MethodChannel? _channel;
   bool? _lastIsDark;
   int? _lastTint;
-  String? _lastTitle;
-  String? _lastIconName;
-  double? _lastIconSize;
   int? _lastIconColor;
   double? _intrinsicWidth;
   CNButtonStyle? _lastStyle;

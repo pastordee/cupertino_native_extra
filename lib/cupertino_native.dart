@@ -76,6 +76,7 @@
 ///   onPressed: () => print('Tapped'),
 /// )
 /// ```
+library;
 
 export 'cupertino_native_platform_interface.dart';
 export 'cupertino_native_method_channel.dart';
