@@ -194,7 +194,6 @@ class _CNPullDownButtonState extends State<CNPullDownButton> {
   MethodChannel? _channel;
   bool? _lastIsDark;
   int? _lastTint;
-  int? _lastIconColor;
   double? _intrinsicWidth;
   CNButtonStyle? _lastStyle;
   Offset? _downPosition;
@@ -523,7 +522,6 @@ class _CNPullDownButtonState extends State<CNPullDownButton> {
     ch.setMethodCallHandler(_onMethodCall);
     _lastTint = resolveColorToArgb(_effectiveTint, context);
     _lastIsDark = _isDark;
-    _lastIconColor = resolveColorToArgb(widget.buttonIcon?.color, context);
     _lastStyle = widget.buttonStyle;
     if (!widget.isIconButton) {
       _requestIntrinsicSize();
