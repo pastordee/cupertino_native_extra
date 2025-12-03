@@ -1,0 +1,8 @@
+# Pub ignore file - files not to publish to pub.dev
+
+# Documentation files
+doc/
+
+# Test/development files
+test/
+example/integration_test/
