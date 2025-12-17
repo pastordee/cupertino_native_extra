@@ -558,9 +558,6 @@ class _CNPullDownButtonState extends State<CNPullDownButton> {
     
     // Similar to popup menu button but for pull-down specific properties
     final tint = resolveColorToArgb(_effectiveTint, context);
-    final preIconName = widget.buttonIcon?.name;
-    final preIconSize = widget.buttonIcon?.size;
-    final preIconColor = resolveColorToArgb(widget.buttonIcon?.color, context);
     
     if (_lastTint != tint && tint != null) {
       await ch.invokeMethod('setStyle', {'tint': tint});
