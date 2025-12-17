@@ -12,6 +12,7 @@ class CupertinoSegmentedControlNSView: NSView {
   private var perSymbolGradientEnabled: [NSNumber?] = []
   private var defaultIconRenderingMode: String? = nil
   private var defaultIconGradientEnabled: Bool = false
+  private var labelSize: CGFloat? = nil
 
   init(viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
     self.channel = FlutterMethodChannel(name: "CupertinoNativeSegmentedControl_\(viewId)", binaryMessenger: messenger)
@@ -36,6 +37,7 @@ class CupertinoSegmentedControlNSView: NSView {
         if let s = style["iconSize"] as? NSNumber { self.defaultIconSize = CGFloat(truncating: s) }
         if let mode = style["iconRenderingMode"] as? String { self.defaultIconRenderingMode = mode }
         if let g = style["iconGradientEnabled"] as? NSNumber { self.defaultIconGradientEnabled = g.boolValue }
+        if let s = style["labelSize"] as? NSNumber { self.labelSize = CGFloat(truncating: s) }
       }
     }
 
@@ -82,6 +84,7 @@ class CupertinoSegmentedControlNSView: NSView {
       case "setStyle":
         if let args = call.arguments as? [String: Any] {
           if let s = args["iconSize"] as? NSNumber { self.defaultIconSize = CGFloat(truncating: s) }
+          if let s = args["labelSize"] as? NSNumber { self.labelSize = CGFloat(truncating: s) }
           self.configureSegments()
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing style", details: nil)) }
@@ -134,6 +137,12 @@ class CupertinoSegmentedControlNSView: NSView {
         control.setImage(image, forSegment: i)
       } else if i < labels.count {
         control.setLabel(labels[i], forSegment: i)
+        if let fontSize = labelSize {
+          // Apply font size to the segment
+          if #available(macOS 10.10, *), let cell = control.cell as? NSSegmentedCell {
+            cell.font = NSFont.systemFont(ofSize: fontSize)
+          }
+        }
       } else {
         control.setLabel("", forSegment: i)
       }

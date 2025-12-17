@@ -17,6 +17,7 @@ class CupertinoSegmentedControlPlatformView: NSObject, FlutterPlatformView {
   private var defaultIconPalette: [UIColor] = []
   private var defaultIconRenderingMode: String? = nil
   private var defaultIconGradientEnabled: Bool = false
+  private var labelSize: CGFloat? = nil
 
   init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
     self.channel = FlutterMethodChannel(name: "CupertinoNativeSegmentedControl_\(viewId)", binaryMessenger: messenger)
@@ -58,6 +59,7 @@ class CupertinoSegmentedControlPlatformView: NSObject, FlutterPlatformView {
         if let arr = style["iconPaletteColors"] as? [NSNumber] { self.defaultIconPalette = arr.map { Self.colorFromARGB($0.intValue) } }
         if let mode = style["iconRenderingMode"] as? String { self.defaultIconRenderingMode = mode }
         if let g = style["iconGradientEnabled"] as? NSNumber { self.defaultIconGradientEnabled = g.boolValue }
+        if let s = style["labelSize"] as? NSNumber { self.labelSize = CGFloat(truncating: s) }
       }
     }
 
@@ -109,6 +111,7 @@ class CupertinoSegmentedControlPlatformView: NSObject, FlutterPlatformView {
           }
           if let n = args["iconColor"] as? NSNumber { self.defaultIconColor = Self.colorFromARGB(n.intValue) }
           if let s = args["iconSize"] as? NSNumber { self.defaultIconSize = CGFloat(truncating: s) }
+          if let s = args["labelSize"] as? NSNumber { self.labelSize = CGFloat(truncating: s) }
           self.rebuildSegments()
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing style", details: nil)) }
@@ -185,6 +188,15 @@ class CupertinoSegmentedControlPlatformView: NSObject, FlutterPlatformView {
         control.insertSegment(with: image, at: idx, animated: false)
       } else if idx < labels.count {
         control.insertSegment(withTitle: labels[idx], at: idx, animated: false)
+        if let fontSize = labelSize {
+          control.setWidth(0, forSegmentAt: idx) // Auto-size
+          if #available(iOS 13.0, *) {
+            // Apply font size to the segment's title attributes
+            var attrs = control.titleTextAttributes(for: .normal) ?? [:]
+            attrs[.font] = UIFont.systemFont(ofSize: fontSize)
+            control.setTitleTextAttributes(attrs, for: .normal)
+          }
+        }
       } else {
         control.insertSegment(withTitle: "", at: idx, animated: false)
       }
