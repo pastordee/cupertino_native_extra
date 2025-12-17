@@ -56,6 +56,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     var segmentedControlLabels: [String] = []
     var segmentedControlSelectedIndex: Int = 0
     var segmentedControlHeight: Double = 28.0
+    var segmentedControlLabelSize: Double = 0
     var segmentedControlTint: UIColor? = nil
 
     if let dict = args as? [String: Any] {
@@ -94,6 +95,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       segmentedControlLabels = (dict["segmentedControlLabels"] as? [String]) ?? []
       segmentedControlSelectedIndex = (dict["segmentedControlSelectedIndex"] as? Int) ?? 0
       segmentedControlHeight = (dict["segmentedControlHeight"] as? Double) ?? 28.0
+      segmentedControlLabelSize = (dict["segmentedControlLabelSize"] as? Double) ?? 0
       if let tintValue = dict["segmentedControlTint"] as? NSNumber {
         segmentedControlTint = Self.colorFromARGB(tintValue.intValue)
       }
@@ -434,6 +436,15 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       segmentedControl.selectedSegmentIndex = segmentedControlSelectedIndex
       segmentedControl.addTarget(self, action: #selector(segmentedControlValueChanged(_:)), for: .valueChanged)
       segmentedControl.translatesAutoresizingMaskIntoConstraints = false
+      
+      // Apply label size if specified
+      if segmentedControlLabelSize > 0 {
+        if #available(iOS 13.0, *) {
+          var attrs = segmentedControl.titleTextAttributes(for: .normal) ?? [:]
+          attrs[.font] = UIFont.systemFont(ofSize: CGFloat(segmentedControlLabelSize))
+          segmentedControl.setTitleTextAttributes(attrs, for: .normal)
+        }
+      }
       
       // Apply tint color if specified (use segmentedControlTint first, fallback to general tint)
       if let segTint = segmentedControlTint {

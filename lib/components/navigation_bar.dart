@@ -292,6 +292,7 @@ class CNNavigationBar extends StatefulWidget {
     this.segmentedControlSelectedIndex,
     this.onSegmentedControlValueChanged,
     this.segmentedControlHeight,
+    this.segmentedControlLabelSize,
     this.segmentedControlTint,
   })  : searchConfig = null,
         scrollableContent = null,
@@ -331,6 +332,7 @@ class CNNavigationBar extends StatefulWidget {
     this.segmentedControlSelectedIndex,
     this.onSegmentedControlValueChanged,
     this.segmentedControlHeight,
+    this.segmentedControlLabelSize,
     this.segmentedControlTint,
   })  : scrollableContent = null,
         _isSearchEnabled = true,
@@ -374,6 +376,7 @@ class CNNavigationBar extends StatefulWidget {
     this.segmentedControlSelectedIndex,
     this.onSegmentedControlValueChanged,
     this.segmentedControlHeight,
+    this.segmentedControlLabelSize,
     this.segmentedControlTint,
   })  : searchConfig = null,
         _isSearchEnabled = false,
@@ -422,6 +425,10 @@ class CNNavigationBar extends StatefulWidget {
   /// Height of the center segmented control in logical pixels.
   /// If null, uses platform default height (typically 28 points).
   final double? segmentedControlHeight;
+
+  /// Font size for the segmented control labels.
+  /// If null, uses platform default font size.
+  final double? segmentedControlLabelSize;
 
   /// Tint color for the selected segment background in the segmented control.
   /// This is the background color of the selected segment.
@@ -636,6 +643,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       'segmentedControlLabels': widget.segmentedControlLabels ?? [],
       'segmentedControlSelectedIndex': widget.segmentedControlSelectedIndex ?? 0,
       'segmentedControlHeight': widget.segmentedControlHeight ?? 28.0,
+      'segmentedControlLabelSize': widget.segmentedControlLabelSize ?? 0.0,
       'segmentedControlTint': resolveColorToArgb(widget.segmentedControlTint ?? _effectiveTint, context),
     };
 
