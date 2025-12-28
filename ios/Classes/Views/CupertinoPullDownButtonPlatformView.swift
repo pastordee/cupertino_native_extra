@@ -323,8 +323,9 @@ class CupertinoPullDownButtonPlatformView: NSObject, FlutterPlatformView {
           
           // Create action with title (shows below icon in horizontal layout)
           // The .medium preferredElementSize displays title below the icon
+          let currentIndex = i
           let action = UIAction(title: subtitle, image: image) { [weak self] _ in
-            self?.channel.invokeMethod("onInlineActionSelected", arguments: i)
+            self?.channel.invokeMethod("onInlineActionSelected", arguments: currentIndex)
           }
           action.attributes = isEnabled ? [] : [UIAction.Attributes.disabled]
           inlineActions.append(action)
@@ -440,8 +441,9 @@ class CupertinoPullDownButtonPlatformView: NSObject, FlutterPlatformView {
             }
             
             let childIsEnabled = childIdx < self.enabled.count ? self.enabled[childIdx] : true
+            let currentIndex = childIdx
             let childAction = UIAction(title: childTitle, image: childImage) { [weak self] _ in
-              self?.channel.invokeMethod("onItemSelected", arguments: childIdx)
+              self?.channel.invokeMethod("onItemSelected", arguments: ["index": currentIndex])
             }
             childAction.attributes = childIsEnabled ? [] : [.disabled]
             submenuChildren.append(childAction)
@@ -461,13 +463,14 @@ class CupertinoPullDownButtonPlatformView: NSObject, FlutterPlatformView {
         } else {
           // Regular action (no submenu)
           let action: UIAction
+          let currentIndex = i
           if #available(iOS 15.0, *), let subtitle = subtitle, !subtitle.isEmpty {
             action = UIAction(title: title, subtitle: subtitle, image: image) { [weak self] _ in
-              self?.channel.invokeMethod("onItemSelected", arguments: i)
+              self?.channel.invokeMethod("onItemSelected", arguments: ["index": currentIndex])
             }
           } else {
             action = UIAction(title: title, image: image) { [weak self] _ in
-              self?.channel.invokeMethod("onItemSelected", arguments: i)
+              self?.channel.invokeMethod("onItemSelected", arguments: ["index": currentIndex])
             }
           }
           action.attributes = isEnabled ? [] : [.disabled]
@@ -504,8 +507,9 @@ class CupertinoPullDownButtonPlatformView: NSObject, FlutterPlatformView {
       if isDiv { continue }
       let title = labels[i]
       let isEnabled = i < enabled.count ? enabled[i] : true
+      let currentIndex = i
       let action = UIAlertAction(title: title, style: .default) { [weak self] _ in
-        self?.channel.invokeMethod("onItemSelected", arguments: i)
+        self?.channel.invokeMethod("onItemSelected", arguments: ["index": currentIndex])
       }
       action.isEnabled = isEnabled
       alert.addAction(action)
@@ -530,12 +534,26 @@ class CupertinoPullDownButtonPlatformView: NSObject, FlutterPlatformView {
       case "borderless": config = .borderless()
       case "borderedProminent": config = .borderedProminent()
       case "borderedTinted": config = .borderedTinted()
+      case "glass":
+        if #available(iOS 26.0, *) { config = .glass() } else { config = .tinted() }
+      case "prominentGlass":
+        if #available(iOS 26.0, *) { config = .prominentGlass() } else { config = .tinted() }
       default: config = .plain()
       }
       if round {
         config.cornerStyle = .capsule
       } else {
         config.cornerStyle = .medium
+      }
+      if let tint = button.tintColor {
+        switch buttonStyle {
+        case "filled", "borderedProminent", "prominentGlass":
+          config.baseBackgroundColor = tint
+        case "tinted", "bordered", "gray", "plain", "glass":
+          config.baseForegroundColor = tint
+        default:
+          break
+        }
       }
       button.configuration = config
     } else {
