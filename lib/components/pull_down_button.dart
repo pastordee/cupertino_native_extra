@@ -529,7 +529,7 @@ class _CNPullDownButtonState extends State<CNPullDownButton> {
   }
 
   Future<dynamic> _onMethodCall(MethodCall call) async {
-    if (call.method == 'itemSelected') {
+    if (call.method == 'onItemSelected') {
       final args = call.arguments as Map?;
       final idx = (args?['index'] as num?)?.toInt();
       if (idx != null) widget.onSelected(idx);
