@@ -637,6 +637,7 @@ class _CNTabBarState extends State<CNTabBar> {
     final ch = _channel;
     if (ch == null) return;
 
+    bool sentAnyImage = false;
     for (int i = 0; i < widget.items.length; i++) {
       final item = widget.items[i];
       if (item.image != null) {
@@ -648,11 +649,17 @@ class _CNTabBarState extends State<CNTabBar> {
               'imageData': imageData,
               if (item.imageSize != null) 'imageSize': item.imageSize,
             });
+            sentAnyImage = true;
           }
         } catch (e) {
           // Silently fail if image loading fails
         }
       }
+    }
+    // Native rebuilds tab items when receiving images, which resets visual selection.
+    // Re-apply the selected index after all images are sent.
+    if (sentAnyImage && mounted) {
+      await ch.invokeMethod('setSelectedIndex', {'index': widget.currentIndex});
     }
   }
 
