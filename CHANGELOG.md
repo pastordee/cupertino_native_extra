@@ -2,6 +2,11 @@
 
 All notable changes to the cupertino_native_extra plugin are documented in this file.
 
+## [0.2.0+5] - 2026-05-24
+
+### Fixed
+- Tab bar selection no longer flickers during image loading. Native `setCustomImage` was rebuilding `UITabBarItem` objects, invalidating the old `selectedItem` pointer. Fixed in the Swift layer by re-applying `selectedItem` after each items rebuild, eliminating the visible deselection window entirely.
+
 ## [0.2.0+4] - 2026-05-24
 
 ### Fixed

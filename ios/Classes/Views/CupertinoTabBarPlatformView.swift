@@ -455,8 +455,17 @@ channel.setMethodCallHandler { [weak self] call, result in
             let leftEnd = count - self.rightCountVal
             left.items = buildItems(0..<leftEnd)
             right.items = buildItems(leftEnd..<count)
+            if self.selectedIndex < leftEnd, let items = left.items {
+              left.selectedItem = items[self.selectedIndex]
+            } else if let items = right.items {
+              let idx = self.selectedIndex - leftEnd
+              if idx >= 0 && idx < items.count { right.selectedItem = items[idx] }
+            }
           } else if let bar = self.tabBar {
             bar.items = buildItems(0..<count)
+            if self.selectedIndex >= 0, let items = bar.items, self.selectedIndex < items.count {
+              bar.selectedItem = items[self.selectedIndex]
+            }
           }
           result(nil)
         } else {
