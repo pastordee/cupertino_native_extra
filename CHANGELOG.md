@@ -2,6 +2,13 @@
 
 All notable changes to the cupertino_native_extra plugin are documented in this file.
 
+## [0.2.0+4] - 2026-05-24
+
+### Fixed
+- Tab bar no longer loses selected index after custom images finish loading. Native rebuilds its items when receiving `setCustomImage` calls; the plugin now re-applies `setSelectedIndex` after all images are sent.
+- Removed unused state fields in `CNPullDownButtonAnchor` that caused analyzer warnings.
+- Replaced non-const `IconData` constructor in non-native fallback paths with a stable `CupertinoIcons` constant.
+
 ## [0.2.0+1] - 2025-12-03
 
 ### Added

@@ -239,12 +239,7 @@ class _CNPullDownButtonState extends State<CNPullDownButton> {
             children: [
               if (widget.isIconButton)
                 Icon(
-                  widget.buttonIcon?.name.isNotEmpty == true
-                      ? IconData(
-                          widget.buttonIcon!.name.codeUnitAt(0),
-                          fontFamily: 'SF Pro Icons',
-                        )
-                      : CupertinoIcons.ellipsis_circle,
+                  CupertinoIcons.ellipsis_circle,
                   size: widget.buttonIcon?.size,
                 )
               else
