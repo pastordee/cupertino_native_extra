@@ -2,6 +2,11 @@
 
 All notable changes to the cupertino_native_extra plugin are documented in this file.
 
+## [0.2.0+6] - 2026-05-24
+
+### Fixed
+- `selectedIndex` is now a stored property on `CupertinoTabBarPlatformView` (was only a local `init` variable). The `setCustomImage` fix in 0.2.0+5 always re-selected index 0 because `self.selectedIndex` resolved to the default. Now it correctly tracks whichever tab the user is on, and stays in sync via `setSelectedIndex`.
+
 ## [0.2.0+5] - 2026-05-24
 
 ### Fixed
