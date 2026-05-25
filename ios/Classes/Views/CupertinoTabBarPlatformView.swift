@@ -142,40 +142,20 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
         left.selectedItem = nil
       }
       container.addSubview(left); container.addSubview(right)
-      // Compute content-fitting widths for both bars and apply symmetric spacing
+      // sizeThatFits(.zero) returns minimum content sizes far smaller than the container,
+      // creating a huge gap and making single-item right pills appear tiny.
       let spacing: CGFloat = splitSpacingVal
-      let leftWidth = left.sizeThatFits(.zero).width + leftInset * 2
-      let rightWidth = right.sizeThatFits(.zero).width + rightInset * 2
-      let total = leftWidth + rightWidth + spacing
-      // If total exceeds container, fall back to proportional widths
-      if total > container.bounds.width {
-        let rightFraction = CGFloat(rightCount) / CGFloat(count)
-        NSLayoutConstraint.activate([
-          right.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -rightInset),
-          right.topAnchor.constraint(equalTo: container.topAnchor),
-          right.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-          right.widthAnchor.constraint(equalTo: container.widthAnchor, multiplier: rightFraction),
-          left.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: leftInset),
-          left.trailingAnchor.constraint(equalTo: right.leadingAnchor, constant: -spacing),
-          left.topAnchor.constraint(equalTo: container.topAnchor),
-          left.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-        ])
-      } else {
-        NSLayoutConstraint.activate([
-          // Right bar fixed width, pinned to trailing
-          right.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -rightInset),
-          right.topAnchor.constraint(equalTo: container.topAnchor),
-          right.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-          right.widthAnchor.constraint(equalToConstant: rightWidth),
-          // Left bar fixed width, pinned to leading
-          left.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: leftInset),
-          left.topAnchor.constraint(equalTo: container.topAnchor),
-          left.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-          left.widthAnchor.constraint(equalToConstant: leftWidth),
-          // Spacing between
-          left.trailingAnchor.constraint(lessThanOrEqualTo: right.leadingAnchor, constant: -spacing),
-        ])
-      }
+      let rightFraction = CGFloat(rightCount) / CGFloat(count)
+      NSLayoutConstraint.activate([
+        right.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -rightInset),
+        right.topAnchor.constraint(equalTo: container.topAnchor),
+        right.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        right.widthAnchor.constraint(equalTo: container.widthAnchor, multiplier: rightFraction),
+        left.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: leftInset),
+        left.trailingAnchor.constraint(equalTo: right.leadingAnchor, constant: -spacing),
+        left.topAnchor.constraint(equalTo: container.topAnchor),
+        left.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+      ])
     } else {
       let bar = UITabBar(frame: .zero)
       tabBar = bar
@@ -315,35 +295,20 @@ channel.setMethodCallHandler { [weak self] call, result in
             if selectedIndex < leftEnd, let items = left.items { left.selectedItem = items[selectedIndex]; right.selectedItem = nil }
             else if let items = right.items { let idx = selectedIndex - leftEnd; if idx >= 0 && idx < items.count { right.selectedItem = items[idx]; left.selectedItem = nil } }
             self.container.addSubview(left); self.container.addSubview(right)
+            // sizeThatFits(.zero) returns minimum content sizes far smaller than the container,
+            // creating a huge gap and making single-item right pills appear tiny.
             let spacing: CGFloat = splitSpacingVal
-            let leftWidth = left.sizeThatFits(.zero).width + leftInset * 2
-            let rightWidth = right.sizeThatFits(.zero).width + rightInset * 2
-            let total = leftWidth + rightWidth + spacing
-            if total > self.container.bounds.width {
-              let rightFraction = CGFloat(rightCount) / CGFloat(count)
-              NSLayoutConstraint.activate([
-                right.trailingAnchor.constraint(equalTo: self.container.trailingAnchor, constant: -rightInset),
-                right.topAnchor.constraint(equalTo: self.container.topAnchor),
-                right.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
-                right.widthAnchor.constraint(equalTo: self.container.widthAnchor, multiplier: rightFraction),
-                left.leadingAnchor.constraint(equalTo: self.container.leadingAnchor, constant: leftInset),
-                left.trailingAnchor.constraint(equalTo: right.leadingAnchor, constant: -spacing),
-                left.topAnchor.constraint(equalTo: self.container.topAnchor),
-                left.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
-              ])
-            } else {
-              NSLayoutConstraint.activate([
-                right.trailingAnchor.constraint(equalTo: self.container.trailingAnchor, constant: -rightInset),
-                right.topAnchor.constraint(equalTo: self.container.topAnchor),
-                right.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
-                right.widthAnchor.constraint(equalToConstant: rightWidth),
-                left.leadingAnchor.constraint(equalTo: self.container.leadingAnchor, constant: leftInset),
-                left.topAnchor.constraint(equalTo: self.container.topAnchor),
-                left.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
-                left.widthAnchor.constraint(equalToConstant: leftWidth),
-                left.trailingAnchor.constraint(lessThanOrEqualTo: right.leadingAnchor, constant: -spacing),
-              ])
-            }
+            let rightFraction = CGFloat(rightCount) / CGFloat(count)
+            NSLayoutConstraint.activate([
+              right.trailingAnchor.constraint(equalTo: self.container.trailingAnchor, constant: -rightInset),
+              right.topAnchor.constraint(equalTo: self.container.topAnchor),
+              right.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
+              right.widthAnchor.constraint(equalTo: self.container.widthAnchor, multiplier: rightFraction),
+              left.leadingAnchor.constraint(equalTo: self.container.leadingAnchor, constant: leftInset),
+              left.trailingAnchor.constraint(equalTo: right.leadingAnchor, constant: -spacing),
+              left.topAnchor.constraint(equalTo: self.container.topAnchor),
+              left.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
+            ])
           } else {
             let bar = UITabBar(frame: .zero)
             self.tabBar = bar
