@@ -1,6 +1,6 @@
 name: cupertino_native_extra
 description: "Native Liquid Glass widgets for iOS and macOS with pixel-perfect fidelity."
-version: 0.2.0+10
+version: 0.2.0+11
 repository: https://github.com/pastordee/cupertino_native_extra
 issue_tracker: https://github.com/pastordee/cupertino_native_extra/issues
 homepage: https://github.com/pastordee/cupertino_native_extra
