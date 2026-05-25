@@ -17,7 +17,7 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
   private var customImageSizes: [Int: CGFloat] = [:]
   private var leftInsetVal: CGFloat = 0
   private var rightInsetVal: CGFloat = 0
-  private var splitSpacingVal: CGFloat = 8
+  private var splitSpacingVal: CGFloat = 4
   private var selectedIndex: Int = 0
 
   init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
