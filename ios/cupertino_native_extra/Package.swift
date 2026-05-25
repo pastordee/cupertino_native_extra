@@ -8,7 +8,7 @@ let package = Package(
         .iOS("14.0"),
     ],
     products: [
-        .library(name: "cupertino_native_extra", targets: ["cupertino_native_extra"]),
+        .library(name: "cupertino-native-extra", targets: ["cupertino_native_extra"]),
     ],
     dependencies: [
         .package(name: "FlutterFramework", path: "../FlutterFramework"),
