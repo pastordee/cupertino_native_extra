@@ -1,27 +1,15 @@
 PODS:
-  - cupertino_native_extra (0.2.0):
-    - Flutter
   - Flutter (1.0.0)
-  - integration_test (0.0.1):
-    - Flutter
 
 DEPENDENCIES:
-  - cupertino_native_extra (from `.symlinks/plugins/cupertino_native_extra/ios`)
   - Flutter (from `Flutter`)
-  - integration_test (from `.symlinks/plugins/integration_test/ios`)
 
 EXTERNAL SOURCES:
-  cupertino_native_extra:
-    :path: ".symlinks/plugins/cupertino_native_extra/ios"
   Flutter:
     :path: Flutter
-  integration_test:
-    :path: ".symlinks/plugins/integration_test/ios"
 
 SPEC CHECKSUMS:
-  cupertino_native_extra: db6c7c6599d0b96f9b2a4635fd81adaddb9a3a1f
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
 
 PODFILE CHECKSUM: a0d84913956a79d7e738e235a1cb8cf41def8911
 
