@@ -145,7 +145,7 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
       // UITabBar pill has ~8pt visual inset on each inner face; compensate so splitSpacingVal
       // equals the visible gap between the two pills, not the raw constraint gap.
       let spacing: CGFloat = splitSpacingVal
-      let rightFraction = CGFloat(rightCount) / CGFloat(count)
+      let rightFraction = max(CGFloat(rightCount) / CGFloat(count), 0.25)
       NSLayoutConstraint.activate([
         right.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -rightInset),
         right.topAnchor.constraint(equalTo: container.topAnchor),
@@ -295,17 +295,17 @@ channel.setMethodCallHandler { [weak self] call, result in
             if selectedIndex < leftEnd, let items = left.items { left.selectedItem = items[selectedIndex]; right.selectedItem = nil }
             else if let items = right.items { let idx = selectedIndex - leftEnd; if idx >= 0 && idx < items.count { right.selectedItem = items[idx]; left.selectedItem = nil } }
             self.container.addSubview(left); self.container.addSubview(right)
-            // UITabBar pill has ~8pt visual inset on each inner face; compensate so splitSpacingVal
-            // equals the visible gap between the two pills, not the raw constraint gap.
+            // Use proportional widths with a minimum of 0.25 for the right pill so a single
+            // right-side item never appears narrower than 25% of the container width.
             let spacing: CGFloat = splitSpacingVal
-            let rightFraction = CGFloat(rightCount) / CGFloat(count)
+            let rightFraction = max(CGFloat(rightCount) / CGFloat(count), 0.25)
             NSLayoutConstraint.activate([
               right.trailingAnchor.constraint(equalTo: self.container.trailingAnchor, constant: -rightInset),
               right.topAnchor.constraint(equalTo: self.container.topAnchor),
               right.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
               right.widthAnchor.constraint(equalTo: self.container.widthAnchor, multiplier: rightFraction),
               left.leadingAnchor.constraint(equalTo: self.container.leadingAnchor, constant: leftInset),
-              left.trailingAnchor.constraint(equalTo: right.leadingAnchor, constant: 16 - spacing),
+              left.trailingAnchor.constraint(equalTo: right.leadingAnchor, constant: -spacing),
               left.topAnchor.constraint(equalTo: self.container.topAnchor),
               left.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
             ])
