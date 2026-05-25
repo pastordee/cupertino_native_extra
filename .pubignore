@@ -6,3 +6,8 @@ doc/
 # Test/development files
 test/
 example/integration_test/
+
+# Build artifacts
+example/ios/build/
+example/build/
+build/
