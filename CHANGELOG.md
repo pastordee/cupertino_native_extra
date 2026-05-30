@@ -2,6 +2,11 @@
 
 All notable changes to the cupertino_native_extra plugin are documented in this file.
 
+## [0.2.1] - 2026-05-30
+
+### Added
+- `imageBytes` field on `CNNavigationBarAction` — pass raw PNG/JPEG bytes (`Uint8List`) to render a custom image icon instead of an SF Symbol. Supported on both iOS (via `UIGraphicsImageRenderer`) and macOS (via `NSImage(data:)`). Use `iconSize` to control the rendered size in points. Image is rendered at original colors (not tinted).
+
 ## [0.2.0+6] - 2026-05-24
 
 ### Fixed
