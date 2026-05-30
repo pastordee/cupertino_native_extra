@@ -47,6 +47,7 @@ class CupertinoNavigationBarNSView: NSView {
     var leadingPaddings: [Double] = []
     var leadingSpacers: [String] = []
     var leadingTints: [Int] = []
+    var leadingImageBytes: [Any?] = []
     var middleIcons: [String] = []
     var middleLabels: [String] = []
     var middlePaddings: [Double] = []
@@ -57,6 +58,7 @@ class CupertinoNavigationBarNSView: NSView {
     var trailingPaddings: [Double] = []
     var trailingSpacers: [String] = []
     var trailingTints: [Int] = []
+    var trailingImageBytes: [Any?] = []
     var transparent: Bool = false
     var isDark: Bool = false
     var tint: NSColor? = nil
@@ -70,6 +72,7 @@ class CupertinoNavigationBarNSView: NSView {
       leadingPaddings = (dict["leadingPaddings"] as? [Double]) ?? []
       leadingSpacers = (dict["leadingSpacers"] as? [String]) ?? []
       leadingTints = (dict["leadingTints"] as? [Int]) ?? []
+      leadingImageBytes = (dict["leadingImageBytes"] as? [Any?]) ?? []
       middleIcons = (dict["middleIcons"] as? [String]) ?? []
       middleLabels = (dict["middleLabels"] as? [String]) ?? []
       middlePaddings = (dict["middlePaddings"] as? [Double]) ?? []
@@ -80,6 +83,7 @@ class CupertinoNavigationBarNSView: NSView {
       trailingPaddings = (dict["trailingPaddings"] as? [Double]) ?? []
       trailingSpacers = (dict["trailingSpacers"] as? [String]) ?? []
       trailingTints = (dict["trailingTints"] as? [Int]) ?? []
+      trailingImageBytes = (dict["trailingImageBytes"] as? [Any?]) ?? []
       pillHeight = dict["pillHeight"] as? Double
       middleAlignment = (dict["middleAlignment"] as? String) ?? "center"
       if let v = dict["transparent"] as? NSNumber { transparent = v.boolValue }
@@ -122,6 +126,7 @@ class CupertinoNavigationBarNSView: NSView {
         icons: leadingIcons,
         labels: leadingLabels,
         paddings: leadingPaddings,
+        imageBytesList: leadingImageBytes,
         pillHeight: pillHeight,
         tint: tint,
         tints: leadingTints,
@@ -146,6 +151,7 @@ class CupertinoNavigationBarNSView: NSView {
         icons: trailingIcons,
         labels: trailingLabels,
         paddings: trailingPaddings,
+        imageBytesList: trailingImageBytes,
         pillHeight: pillHeight,
         tint: tint,
         tints: trailingTints,
@@ -300,6 +306,7 @@ class CupertinoNavigationBarNSView: NSView {
     icons: [String],
     labels: [String],
     paddings: [Double],
+    imageBytesList: [Any?] = [],
     pillHeight: Double?,
     tint: NSColor?,
     tints: [Int] = [],
@@ -369,7 +376,14 @@ class CupertinoNavigationBarNSView: NSView {
       button.bezelStyle = .texturedRounded
       button.isBordered = false
       
-      if #available(macOS 11.0, *), i < icons.count, !icons[i].isEmpty,
+      if i < imageBytesList.count,
+         let typedData = imageBytesList[i] as? FlutterStandardTypedData,
+         let image = NSImage(data: typedData.data) {
+        let size = 16.0  // macOS toolbar icon default
+        image.size = NSSize(width: size, height: size)
+        button.image = image
+        button.imagePosition = .imageOnly
+      } else if #available(macOS 11.0, *), i < icons.count, !icons[i].isEmpty,
          let image = NSImage(systemSymbolName: icons[i], accessibilityDescription: nil) {
         let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
         button.image = image.withSymbolConfiguration(config)
