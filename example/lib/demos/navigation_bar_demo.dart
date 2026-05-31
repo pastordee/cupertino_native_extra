@@ -167,6 +167,11 @@ class _NavigationBarDemoPageState extends State<NavigationBarDemoPage> {
                       ),
                       _buildFeature('🎯', 'SF Symbols', 'Native icon support'),
                       _buildFeature(
+                        '🖼️',
+                        'Image Icons',
+                        'PNG/JPEG bytes as bar button icons (save icon above)',
+                      ),
+                      _buildFeature(
                         '🌓',
                         'Dark Mode',
                         'Automatic theme adaptation',
@@ -233,7 +238,9 @@ class _NavigationBarDemoPageState extends State<NavigationBarDemoPage> {
                     context: context,
                     builder: (context) => CupertinoAlertDialog(
                       title: const Text('Title Tapped'),
-                      content: const Text('The navigation bar title was tapped!'),
+                      content: const Text(
+                        'The navigation bar title was tapped!',
+                      ),
                       actions: [
                         CupertinoDialogAction(
                           child: const Text('OK'),
@@ -245,16 +252,18 @@ class _NavigationBarDemoPageState extends State<NavigationBarDemoPage> {
                 },
                 // THE INCREDIBLE HACK: Scrollable segmented control with many segments!
                 // Try selecting the last segment to see it auto-scroll to center
-                segmentedControlLabels: [
-                  'Notifications',
-                  'Buddy Requests',
-                ],
+                segmentedControlLabels: ['Notifications', 'Buddy Requests'],
                 segmentedControlSelectedIndex: _selectedViewMode,
                 onSegmentedControlValueChanged: (index) {
                   setState(() {
                     _selectedViewMode = index;
                   });
-                  final labels = ['Notifications', 'Buddy Requests', 'Grid Requests', 'Messages'];
+                  final labels = [
+                    'Notifications',
+                    'Buddy Requests',
+                    'Grid Requests',
+                    'Messages',
+                  ];
                   print('Selected: ${labels[index]}');
                 },
                 segmentedControlHeight: 40,
@@ -272,13 +281,11 @@ class _NavigationBarDemoPageState extends State<NavigationBarDemoPage> {
                   ),
                   CNNavigationBarAction.flexibleSpace(),
                   CNNavigationBarAction(
-                    icon: CNSymbol('plus'),
-                    iconSize: 18,
-                    tint: CupertinoColors.systemGreen,
-                    badgeValue: 'New',
-                    badgeColor: CupertinoColors.systemOrange,
+                    imageAsset: 'assets/icons8-save-50.png',
+                    // icon: CNSymbol('square.and.arrow.down'),
+                    iconSize: 24,
                     onPressed: () {
-                      print('Add tapped');
+                      print('Save tapped');
                     },
                   ),
                 ],

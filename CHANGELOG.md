@@ -2,10 +2,15 @@
 
 All notable changes to the cupertino_native_extra plugin are documented in this file.
 
+## [0.2.2] - 2026-05-30
+
+### Changed
+- Replaced `imageBytes: Uint8List?` with `imageAsset: String?` on `CNNavigationBarAction`. Pass a Flutter asset path (e.g. `'assets/my_icon.png'`) and the native side resolves it via the plugin registrar — no manual byte-loading required. iOS uses `UIImage(contentsOfFile:)` via `registrar.lookupKey(forAsset:)`; macOS uses `NSImage(contentsOf:)`.
+
 ## [0.2.1] - 2026-05-30
 
 ### Added
-- `imageBytes` field on `CNNavigationBarAction` — pass raw PNG/JPEG bytes (`Uint8List`) to render a custom image icon instead of an SF Symbol. Supported on both iOS (via `UIGraphicsImageRenderer`) and macOS (via `NSImage(data:)`). Use `iconSize` to control the rendered size in points. Image is rendered at original colors (not tinted).
+- `imageBytes` field on `CNNavigationBarAction` — pass raw PNG/JPEG bytes (`Uint8List`) to render a custom image icon instead of an SF Symbol.
 
 ## [0.2.0+6] - 2026-05-24
 

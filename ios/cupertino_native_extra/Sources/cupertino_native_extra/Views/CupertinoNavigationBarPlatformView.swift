@@ -13,8 +13,10 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   private var leadingPopupMenus: [Any?] = []
   private var middlePopupMenus: [Any?] = []
   private var trailingPopupMenus: [Any?] = []
+  private let registrar: FlutterPluginRegistrar
 
-  init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
+  init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger, registrar: FlutterPluginRegistrar) {
+    self.registrar = registrar
     self.channel = FlutterMethodChannel(name: "CupertinoNativeNavigationBar_\(viewId)", binaryMessenger: messenger)
     self.container = UIView(frame: frame)
     self.navigationBar = UINavigationBar(frame: .zero)
@@ -32,7 +34,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     var leadingTints: [Int] = []
     var leadingBadgeValues: [String] = []
     var leadingBadgeColors: [Int] = []
-    var leadingImageBytes: [Any?] = []
+    var leadingImageAssets: [String] = []
     var middleIcons: [String] = []
     var middleLabels: [String] = []
     var middlePaddings: [Double] = []
@@ -48,7 +50,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     var trailingTints: [Int] = []
     var trailingBadgeValues: [String] = []
     var trailingBadgeColors: [Int] = []
-    var trailingImageBytes: [Any?] = []
+    var trailingImageAssets: [String] = []
     var largeTitle: Bool = false
     var transparent: Bool = false
     var isDark: Bool = false
@@ -74,7 +76,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       leadingTints = (dict["leadingTints"] as? [Int]) ?? []
       leadingBadgeValues = (dict["leadingBadgeValues"] as? [String]) ?? []
       leadingBadgeColors = (dict["leadingBadgeColors"] as? [Int]) ?? []
-      leadingImageBytes = (dict["leadingImageBytes"] as? [Any?]) ?? []
+      leadingImageAssets = (dict["leadingImageAssets"] as? [String]) ?? []
       middleIcons = (dict["middleIcons"] as? [String]) ?? []
       middleLabels = (dict["middleLabels"] as? [String]) ?? []
       middlePaddings = (dict["middlePaddings"] as? [Double]) ?? []
@@ -90,7 +92,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       trailingTints = (dict["trailingTints"] as? [Int]) ?? []
       trailingBadgeValues = (dict["trailingBadgeValues"] as? [String]) ?? []
       trailingBadgeColors = (dict["trailingBadgeColors"] as? [Int]) ?? []
-      trailingImageBytes = (dict["trailingImageBytes"] as? [Any?]) ?? []
+      trailingImageAssets = (dict["trailingImageAssets"] as? [String]) ?? []
       leadingPopupMenus = (dict["leadingPopupMenus"] as? [Any?]) ?? []
       middlePopupMenus = (dict["middlePopupMenus"] as? [Any?]) ?? []
       trailingPopupMenus = (dict["trailingPopupMenus"] as? [Any?]) ?? []
@@ -188,7 +190,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       var currentGroupTints: [Int] = []
       var currentGroupBadgeValues: [String] = []
       var currentGroupBadgeColors: [Int] = []
-      var currentGroupImageBytes: [Any?] = []
+      var currentGroupImageAssets: [String] = []
       var pendingSpacing: Double = 0.0  // Track spacing to add to next button
 
       func finalizeCurrentGroup() {
@@ -199,7 +201,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
             paddings: currentGroupPaddings,
             labelSizes: currentGroupLabelSizes,
             iconSizes: currentGroupIconSizes,
-            imageBytesList: currentGroupImageBytes,
+            imageAssets: currentGroupImageAssets,
             pillHeight: pillHeight,
             tint: tint,
             tints: currentGroupTints,
@@ -230,7 +232,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           currentGroupIconSizes = []
           currentGroupIndices = []
           currentGroupTints = []
-          currentGroupImageBytes = []
+          currentGroupImageAssets = []
           pendingSpacing = 0.0
         }
       }
@@ -276,7 +278,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           currentGroupIconSizes.append(iconSize)
           currentGroupIndices.append(i)
           currentGroupTints.append(tintValue)
-          currentGroupImageBytes.append(i < leadingImageBytes.count ? leadingImageBytes[i] : nil)
+          currentGroupImageAssets.append(i < leadingImageAssets.count ? leadingImageAssets[i] : "")
 
           let badgeValue = i < leadingBadgeValues.count ? leadingBadgeValues[i] : ""
           let badgeColor = i < leadingBadgeColors.count ? leadingBadgeColors[i] : 0
@@ -552,7 +554,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       var currentGroupTints: [Int] = []
       var currentGroupBadgeValues: [String] = []
       var currentGroupBadgeColors: [Int] = []
-      var currentGroupImageBytes: [Any?] = []
+      var currentGroupImageAssets: [String] = []
       var pendingSpacing: Double = 0.0  // Track spacing to add to next button
 
       func finalizeCurrentGroup() {
@@ -563,7 +565,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
             paddings: currentGroupPaddings,
             labelSizes: currentGroupLabelSizes,
             iconSizes: currentGroupIconSizes,
-            imageBytesList: currentGroupImageBytes,
+            imageAssets: currentGroupImageAssets,
             pillHeight: pillHeight,
             tint: tint,
             tints: currentGroupTints,
@@ -594,7 +596,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           currentGroupIconSizes = []
           currentGroupIndices = []
           currentGroupTints = []
-          currentGroupImageBytes = []
+          currentGroupImageAssets = []
           pendingSpacing = 0.0
         }
       }
@@ -640,7 +642,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           currentGroupIconSizes.append(iconSize)
           currentGroupIndices.append(i)
           currentGroupTints.append(tintValue)
-          currentGroupImageBytes.append(i < trailingImageBytes.count ? trailingImageBytes[i] : nil)
+          currentGroupImageAssets.append(i < trailingImageAssets.count ? trailingImageAssets[i] : "")
 
           let badgeValue = i < trailingBadgeValues.count ? trailingBadgeValues[i] : ""
           let badgeColor = i < trailingBadgeColors.count ? trailingBadgeColors[i] : 0
@@ -913,7 +915,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     paddings: [Double],
     labelSizes: [Double],
     iconSizes: [Double],
-    imageBytesList: [Any?] = [],
+    imageAssets: [String] = [],
     pillHeight: Double?,
     tint: UIColor?,
     tints: [Int] = [],
@@ -987,14 +989,16 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       button.addTarget(target, action: #selector(buttonTouchDown(_:)), for: .touchDown)
       button.addTarget(target, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
       
-      if i < imageBytesList.count,
-         let typedData = imageBytesList[i] as? FlutterStandardTypedData,
-         let image = UIImage(data: typedData.data) {
-        let size = i < iconSizes.count && iconSizes[i] > 0 ? CGFloat(iconSizes[i]) : 24
-        let scaled = UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { _ in
-          image.draw(in: CGRect(origin: .zero, size: CGSize(width: size, height: size)))
+      if i < imageAssets.count, !imageAssets[i].isEmpty {
+        let key = registrar.lookupKey(forAsset: imageAssets[i])
+        if let path = Bundle.main.path(forResource: key, ofType: nil),
+           let image = UIImage(contentsOfFile: path) {
+          let size = i < iconSizes.count && iconSizes[i] > 0 ? CGFloat(iconSizes[i]) : 24
+          let scaled = UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: CGSize(width: size, height: size)))
+          }
+          button.setImage(scaled.withRenderingMode(.alwaysOriginal), for: .normal)
         }
-        button.setImage(scaled.withRenderingMode(.alwaysOriginal), for: .normal)
       } else if i < icons.count, !icons[i].isEmpty, let image = UIImage(systemName: icons[i]) {
         let iconSize = i < iconSizes.count && iconSizes[i] > 0 ? CGFloat(iconSizes[i]) : 17
         let config = UIImage.SymbolConfiguration(pointSize: iconSize, weight: .semibold)

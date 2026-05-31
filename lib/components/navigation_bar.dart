@@ -16,7 +16,7 @@ class CNNavigationBarAction {
   /// Creates a navigation bar action item.
   const CNNavigationBarAction({
     this.icon,
-    this.imageBytes,
+    this.imageAsset,
     this.label,
     this.onPressed,
     this.padding,
@@ -40,7 +40,7 @@ class CNNavigationBarAction {
   /// Creates a navigation bar action with a popup menu.
   const CNNavigationBarAction.popupMenu({
     this.icon,
-    this.imageBytes,
+    this.imageAsset,
     this.label,
     required this.popupMenuItems,
     required this.onPopupMenuSelected,
@@ -65,7 +65,7 @@ class CNNavigationBarAction {
   /// This provides a more native-looking popup menu button with built-in styling.
   const CNNavigationBarAction.popupMenuButton({
     this.icon,
-    this.imageBytes,
+    this.imageAsset,
     this.label,
     required this.popupMenuItems,
     required this.onPopupMenuSelected,
@@ -90,7 +90,7 @@ class CNNavigationBarAction {
   /// This provides a native pull-down button that shows a menu below the button.
   const CNNavigationBarAction.pullDownButton({
     this.icon,
-    this.imageBytes,
+    this.imageAsset,
     this.label,
     required this.popupMenuItems,
     required this.onPopupMenuSelected,
@@ -114,7 +114,7 @@ class CNNavigationBarAction {
   /// Creates a fixed space item with specific width.
   const CNNavigationBarAction.fixedSpace(double width)
     : icon = null,
-      imageBytes = null,
+      imageAsset = null,
       label = null,
       labelSize = null,
       iconSize = null,
@@ -138,7 +138,7 @@ class CNNavigationBarAction {
   /// Creates a flexible space that expands to fill available space.
   const CNNavigationBarAction.flexibleSpace()
     : icon = null,
-      imageBytes = null,
+      imageAsset = null,
       label = null,
       labelSize = null,
       iconSize = null,
@@ -170,7 +170,7 @@ class CNNavigationBarAction {
     this.tint,
     this.padding,
   }) : icon = null,
-       imageBytes = null,
+       imageAsset = null,
        label = null,
        labelSize = null,
        iconSize = null,
@@ -187,11 +187,11 @@ class CNNavigationBarAction {
   /// SF Symbol icon for the action.
   final CNSymbol? icon;
 
-  /// Raw image bytes (PNG or JPEG) to use as the button icon.
-  /// Takes priority over [icon] when both are provided.
+  /// Flutter asset path to use as the button icon (e.g. `'assets/my_icon.png'`).
+  /// Takes priority over [icon] when provided. The asset is resolved via the
+  /// native plugin registrar so no manual byte-loading is required.
   /// Use [iconSize] to control the rendered size in points.
-  /// On iOS/macOS the image is rendered at original colors (not tinted).
-  final Uint8List? imageBytes;
+  final String? imageAsset;
 
   /// Text label for the action (used if icon is null).
   final String? label;
@@ -624,10 +624,10 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
             ?.map((e) => resolveColorToArgb(e.badgeColor, context) ?? 0)
             .toList() ??
         [];
-    final leadingImageBytes =
-        widget.leading?.map((e) => e.imageBytes).toList() ?? [];
-    final trailingImageBytes =
-        widget.trailing?.map((e) => e.imageBytes).toList() ?? [];
+    final leadingImageAssets =
+        widget.leading?.map((e) => e.imageAsset ?? '').toList() ?? [];
+    final trailingImageAssets =
+        widget.trailing?.map((e) => e.imageAsset ?? '').toList() ?? [];
 
     // Collect popup menu data for native implementation
     final leadingPopupMenus =
@@ -694,7 +694,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       'leadingTints': leadingTints,
       'leadingBadgeValues': leadingBadgeValues,
       'leadingBadgeColors': leadingBadgeColors,
-      'leadingImageBytes': leadingImageBytes,
+      'leadingImageAssets': leadingImageAssets,
       'leadingPopupMenus': leadingPopupMenus,
       'trailingIcons': trailingIcons,
       'trailingLabels': trailingLabels,
@@ -705,7 +705,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       'trailingTints': trailingTints,
       'trailingBadgeValues': trailingBadgeValues,
       'trailingBadgeColors': trailingBadgeColors,
-      'trailingImageBytes': trailingImageBytes,
+      'trailingImageAssets': trailingImageAssets,
       'trailingPopupMenus': trailingPopupMenus,
       'largeTitle': widget.largeTitle,
       'transparent': widget.transparent,
