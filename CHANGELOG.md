@@ -2,6 +2,11 @@
 
 All notable changes to the cupertino_native_extra plugin are documented in this file.
 
+## [0.2.3] - 2026-05-30
+
+### Fixed
+- `imageAsset` on `CNNavigationBarAction` now respects `tint`. When a tint color is set (per-action or global), the image is rendered as a template so `tintColor` applies. Without a tint the image renders at original colors.
+
 ## [0.2.2] - 2026-05-30
 
 ### Changed

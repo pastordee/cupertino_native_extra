@@ -997,7 +997,9 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           let scaled = UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { _ in
             image.draw(in: CGRect(origin: .zero, size: CGSize(width: size, height: size)))
           }
-          button.setImage(scaled.withRenderingMode(.alwaysOriginal), for: .normal)
+          let hasTint = (i < tints.count && tints[i] != 0) || tint != nil
+          let renderingMode: UIImage.RenderingMode = hasTint ? .alwaysTemplate : .alwaysOriginal
+          button.setImage(scaled.withRenderingMode(renderingMode), for: .normal)
         }
       } else if i < icons.count, !icons[i].isEmpty, let image = UIImage(systemName: icons[i]) {
         let iconSize = i < iconSizes.count && iconSizes[i] > 0 ? CGFloat(iconSizes[i]) : 17

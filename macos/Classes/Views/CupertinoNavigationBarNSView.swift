@@ -383,6 +383,10 @@ class CupertinoNavigationBarNSView: NSView {
         if let url = Bundle.main.url(forResource: key, withExtension: nil),
            let image = NSImage(contentsOf: url) {
           image.size = NSSize(width: 16, height: 16)
+          let hasTint = (i < tints.count && tints[i] != 0) || tint != nil
+          if hasTint {
+            image.isTemplate = true
+          }
           button.image = image
           button.imagePosition = .imageOnly
         }
