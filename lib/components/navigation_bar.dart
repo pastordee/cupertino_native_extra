@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../channel/params.dart';
@@ -13,10 +12,11 @@ import 'search_bar.dart';
 import 'segmented_control.dart';
 
 /// Action item for navigation bar trailing/leading positions.
-class CNNavigationBarAction { 
+class CNNavigationBarAction {
   /// Creates a navigation bar action item.
   const CNNavigationBarAction({
     this.icon,
+    this.imageAsset,
     this.label,
     this.onPressed,
     this.padding,
@@ -25,21 +25,22 @@ class CNNavigationBarAction {
     this.tint,
     this.badgeValue,
     this.badgeColor,
-  })  : popupMenuItems = null,
-        onPopupMenuSelected = null,
-        segmentedControlLabels = null,
-        segmentedControlSelectedIndex = null,
-        onSegmentedControlValueChanged = null,
-        segmentedControlHeight = null,
-        segmentedControlWidth = null,
-        _isFixedSpace = false,
-        _isFlexibleSpace = false,
-        _usePopupMenuButton = false,
-        _usePullDownButton = false;
+  }) : popupMenuItems = null,
+       onPopupMenuSelected = null,
+       segmentedControlLabels = null,
+       segmentedControlSelectedIndex = null,
+       onSegmentedControlValueChanged = null,
+       segmentedControlHeight = null,
+       segmentedControlWidth = null,
+       _isFixedSpace = false,
+       _isFlexibleSpace = false,
+       _usePopupMenuButton = false,
+       _usePullDownButton = false;
 
   /// Creates a navigation bar action with a popup menu.
   const CNNavigationBarAction.popupMenu({
     this.icon,
+    this.imageAsset,
     this.label,
     required this.popupMenuItems,
     required this.onPopupMenuSelected,
@@ -49,21 +50,22 @@ class CNNavigationBarAction {
     this.tint,
     this.badgeValue,
     this.badgeColor,
-  })  : onPressed = null,
-        segmentedControlLabels = null,
-        segmentedControlSelectedIndex = null,
-        onSegmentedControlValueChanged = null,
-        segmentedControlHeight = null,
-        segmentedControlWidth = null,
-        _isFixedSpace = false,
-        _isFlexibleSpace = false,
-        _usePopupMenuButton = false,
-        _usePullDownButton = false;
+  }) : onPressed = null,
+       segmentedControlLabels = null,
+       segmentedControlSelectedIndex = null,
+       onSegmentedControlValueChanged = null,
+       segmentedControlHeight = null,
+       segmentedControlWidth = null,
+       _isFixedSpace = false,
+       _isFlexibleSpace = false,
+       _usePopupMenuButton = false,
+       _usePullDownButton = false;
 
   /// Creates a navigation bar action with a CNPopupMenuButton.
   /// This provides a more native-looking popup menu button with built-in styling.
   const CNNavigationBarAction.popupMenuButton({
     this.icon,
+    this.imageAsset,
     this.label,
     required this.popupMenuItems,
     required this.onPopupMenuSelected,
@@ -73,21 +75,22 @@ class CNNavigationBarAction {
     this.tint,
     this.badgeValue,
     this.badgeColor,
-  })  : onPressed = null,
-        segmentedControlLabels = null,
-        segmentedControlSelectedIndex = null,
-        onSegmentedControlValueChanged = null,
-        segmentedControlHeight = null,
-        segmentedControlWidth = null,
-        _isFixedSpace = false,
-        _isFlexibleSpace = false,
-        _usePopupMenuButton = true,
-        _usePullDownButton = false;
+  }) : onPressed = null,
+       segmentedControlLabels = null,
+       segmentedControlSelectedIndex = null,
+       onSegmentedControlValueChanged = null,
+       segmentedControlHeight = null,
+       segmentedControlWidth = null,
+       _isFixedSpace = false,
+       _isFlexibleSpace = false,
+       _usePopupMenuButton = true,
+       _usePullDownButton = false;
 
   /// Creates a navigation bar action with a CNPullDownButton.
   /// This provides a native pull-down button that shows a menu below the button.
   const CNNavigationBarAction.pullDownButton({
     this.icon,
+    this.imageAsset,
     this.label,
     required this.popupMenuItems,
     required this.onPopupMenuSelected,
@@ -97,62 +100,64 @@ class CNNavigationBarAction {
     this.tint,
     this.badgeValue,
     this.badgeColor,
-  })  : onPressed = null,
-        segmentedControlLabels = null,
-        segmentedControlSelectedIndex = null,
-        onSegmentedControlValueChanged = null,
-        segmentedControlHeight = null,
-        segmentedControlWidth = null,
-        _isFixedSpace = false,
-        _isFlexibleSpace = false,
-        _usePopupMenuButton = false,
-        _usePullDownButton = true;
+  }) : onPressed = null,
+       segmentedControlLabels = null,
+       segmentedControlSelectedIndex = null,
+       onSegmentedControlValueChanged = null,
+       segmentedControlHeight = null,
+       segmentedControlWidth = null,
+       _isFixedSpace = false,
+       _isFlexibleSpace = false,
+       _usePopupMenuButton = false,
+       _usePullDownButton = true;
 
   /// Creates a fixed space item with specific width.
   const CNNavigationBarAction.fixedSpace(double width)
-      : icon = null,
-        label = null,
-        labelSize = null,
-        iconSize = null,
-        onPressed = null,
-        popupMenuItems = null,
-        onPopupMenuSelected = null,
-        padding = width,
-        tint = null,
-        badgeValue = null,
-        badgeColor = null,
-        segmentedControlLabels = null,
-        segmentedControlSelectedIndex = null,
-        onSegmentedControlValueChanged = null,
-        segmentedControlHeight = null,
-        segmentedControlWidth = null,
-        _isFixedSpace = true,
-        _isFlexibleSpace = false,
-        _usePopupMenuButton = false,
-        _usePullDownButton = false;
+    : icon = null,
+      imageAsset = null,
+      label = null,
+      labelSize = null,
+      iconSize = null,
+      onPressed = null,
+      popupMenuItems = null,
+      onPopupMenuSelected = null,
+      padding = width,
+      tint = null,
+      badgeValue = null,
+      badgeColor = null,
+      segmentedControlLabels = null,
+      segmentedControlSelectedIndex = null,
+      onSegmentedControlValueChanged = null,
+      segmentedControlHeight = null,
+      segmentedControlWidth = null,
+      _isFixedSpace = true,
+      _isFlexibleSpace = false,
+      _usePopupMenuButton = false,
+      _usePullDownButton = false;
 
   /// Creates a flexible space that expands to fill available space.
   const CNNavigationBarAction.flexibleSpace()
-      : icon = null,
-        label = null,
-        labelSize = null,
-        iconSize = null,
-        onPressed = null,
-        popupMenuItems = null,
-        onPopupMenuSelected = null,
-        padding = null,
-        tint = null,
-        badgeValue = null,
-        badgeColor = null,
-        segmentedControlLabels = null,
-        segmentedControlSelectedIndex = null,
-        onSegmentedControlValueChanged = null,
-        segmentedControlHeight = null,
-        segmentedControlWidth = null,
-        _isFixedSpace = false,
-        _isFlexibleSpace = true,
-        _usePopupMenuButton = false,
-        _usePullDownButton = false;
+    : icon = null,
+      imageAsset = null,
+      label = null,
+      labelSize = null,
+      iconSize = null,
+      onPressed = null,
+      popupMenuItems = null,
+      onPopupMenuSelected = null,
+      padding = null,
+      tint = null,
+      badgeValue = null,
+      badgeColor = null,
+      segmentedControlLabels = null,
+      segmentedControlSelectedIndex = null,
+      onSegmentedControlValueChanged = null,
+      segmentedControlHeight = null,
+      segmentedControlWidth = null,
+      _isFixedSpace = false,
+      _isFlexibleSpace = true,
+      _usePopupMenuButton = false,
+      _usePullDownButton = false;
 
   /// Creates a navigation bar action with a segmented control.
   /// This embeds a native UISegmentedControl/NSSegmentedControl in the navigation bar.
@@ -164,22 +169,29 @@ class CNNavigationBarAction {
     this.segmentedControlWidth,
     this.tint,
     this.padding,
-  })  : icon = null,
-        label = null,
-        labelSize = null,
-        iconSize = null,
-        onPressed = null,
-        popupMenuItems = null,
-        onPopupMenuSelected = null,
-        badgeValue = null,
-        badgeColor = null,
-        _isFixedSpace = false,
-        _isFlexibleSpace = false,
-        _usePopupMenuButton = false,
-        _usePullDownButton = false;
+  }) : icon = null,
+       imageAsset = null,
+       label = null,
+       labelSize = null,
+       iconSize = null,
+       onPressed = null,
+       popupMenuItems = null,
+       onPopupMenuSelected = null,
+       badgeValue = null,
+       badgeColor = null,
+       _isFixedSpace = false,
+       _isFlexibleSpace = false,
+       _usePopupMenuButton = false,
+       _usePullDownButton = false;
 
   /// SF Symbol icon for the action.
   final CNSymbol? icon;
+
+  /// Flutter asset path to use as the button icon (e.g. `'assets/my_icon.png'`).
+  /// Takes priority over [icon] when provided. The asset is resolved via the
+  /// native plugin registrar so no manual byte-loading is required.
+  /// Use [iconSize] to control the rendered size in points.
+  final String? imageAsset;
 
   /// Text label for the action (used if icon is null).
   final String? label;
@@ -268,7 +280,8 @@ class CNNavigationBarAction {
   bool get usePullDownButton => _usePullDownButton;
 
   /// Returns true if this action is a segmented control.
-  bool get isSegmentedControl => segmentedControlLabels != null && segmentedControlLabels!.isNotEmpty;
+  bool get isSegmentedControl =>
+      segmentedControlLabels != null && segmentedControlLabels!.isNotEmpty;
 }
 
 /// A Cupertino-native navigation bar with liquid glass translucent effect.
@@ -293,11 +306,15 @@ class CNNavigationBar extends StatefulWidget {
     this.segmentedControlSelectedIndex,
     this.onSegmentedControlValueChanged,
     this.segmentedControlHeight,
+    this.segmentedControlLabelSize,
     this.segmentedControlTint,
-  })  : searchConfig = null,
-        scrollableContent = null,
-        _isSearchEnabled = false,
-        _isScrollable = false;
+    this.segmentedControlSelectedColor,
+    this.segmentedControlLabelColor,
+    this.segmentedControlSelectedLabelColor,
+  }) : searchConfig = null,
+       scrollableContent = null,
+       _isSearchEnabled = false,
+       _isScrollable = false;
 
   /// Creates a navigation bar with integrated search functionality.
   ///
@@ -332,10 +349,14 @@ class CNNavigationBar extends StatefulWidget {
     this.segmentedControlSelectedIndex,
     this.onSegmentedControlValueChanged,
     this.segmentedControlHeight,
+    this.segmentedControlLabelSize,
     this.segmentedControlTint,
-  })  : scrollableContent = null,
-        _isSearchEnabled = true,
-        _isScrollable = false;
+    this.segmentedControlSelectedColor,
+    this.segmentedControlLabelColor,
+    this.segmentedControlSelectedLabelColor,
+  }) : scrollableContent = null,
+       _isSearchEnabled = true,
+       _isScrollable = false;
 
   /// Creates a navigation bar with native UINavigationController and scroll view.
   ///
@@ -375,10 +396,14 @@ class CNNavigationBar extends StatefulWidget {
     this.segmentedControlSelectedIndex,
     this.onSegmentedControlValueChanged,
     this.segmentedControlHeight,
+    this.segmentedControlLabelSize,
     this.segmentedControlTint,
-  })  : searchConfig = null,
-        _isSearchEnabled = false,
-        _isScrollable = true;
+    this.segmentedControlSelectedColor,
+    this.segmentedControlLabelColor,
+    this.segmentedControlSelectedLabelColor,
+  }) : searchConfig = null,
+       _isSearchEnabled = false,
+       _isScrollable = true;
 
   /// Leading actions (typically back button, can include multiple items).
   final List<CNNavigationBarAction>? leading;
@@ -424,10 +449,26 @@ class CNNavigationBar extends StatefulWidget {
   /// If null, uses platform default height (typically 28 points).
   final double? segmentedControlHeight;
 
+  /// Font size for the segmented control labels.
+  /// If null, uses platform default font size.
+  final double? segmentedControlLabelSize;
+
   /// Tint color for the selected segment background in the segmented control.
   /// This is the background color of the selected segment.
   /// If null, uses the navigation bar's tint color or system default.
   final Color? segmentedControlTint;
+
+  /// Background color of the selected segment (`selectedSegmentTintColor`).
+  /// If null, keeps the platform default selected appearance.
+  final Color? segmentedControlSelectedColor;
+
+  /// Text color for unselected segment labels.
+  /// If null, uses the system default label color.
+  final Color? segmentedControlLabelColor;
+
+  /// Text color for the selected segment label.
+  /// If null, falls back to [segmentedControlLabelColor] or the system default.
+  final Color? segmentedControlSelectedLabelColor;
 
   /// Search configuration (only for search-enabled navigation bar).
   final CNSearchConfig? searchConfig;
@@ -488,8 +529,9 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
   @override
   Widget build(BuildContext context) {
     // Check if segmented control is provided as a center view
-    final hasSegmentedControl = widget.segmentedControlLabels != null && 
-                                widget.segmentedControlLabels!.isNotEmpty;
+    final hasSegmentedControl =
+        widget.segmentedControlLabels != null &&
+        widget.segmentedControlLabels!.isNotEmpty;
 
     if (!(defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS)) {
@@ -507,7 +549,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       } else if (widget.title != null) {
         middle = Text(widget.title!);
       }
-      
+
       return CupertinoNavigationBar(
         leading: widget.leading != null && widget.leading!.isNotEmpty
             ? _buildActionWidget(widget.leading!.first)
@@ -516,90 +558,146 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
         trailing: widget.trailing != null && widget.trailing!.isNotEmpty
             ? _buildActionWidget(widget.trailing!.first)
             : null,
-        backgroundColor: widget.transparent ? CupertinoColors.transparent : null,
+        backgroundColor: widget.transparent
+            ? CupertinoColors.transparent
+            : null,
       );
     }
 
     // No need to filter actions anymore - segmented control is separate
     final leadingIcons =
-        widget.leading?.map((e) => e.isSpacer ? '' : (e.icon?.name ?? '')).toList() ?? [];
+        widget.leading
+            ?.map((e) => e.isSpacer ? '' : (e.icon?.name ?? ''))
+            .toList() ??
+        [];
     final leadingLabels =
-        widget.leading?.map((e) => e.isSpacer ? '' : (e.label ?? '')).toList() ?? [];
+        widget.leading
+            ?.map((e) => e.isSpacer ? '' : (e.label ?? ''))
+            .toList() ??
+        [];
     final leadingPaddings =
         widget.leading?.map((e) => e.padding ?? 0.0).toList() ?? [];
     final leadingLabelSizes =
         widget.leading?.map((e) => e.labelSize ?? 0.0).toList() ?? [];
     final leadingIconSizes =
-        widget.leading?.map((e) => e.iconSize ?? e.icon?.size ?? 0.0).toList() ?? [];
+        widget.leading
+            ?.map((e) => e.iconSize ?? e.icon?.size ?? 0.0)
+            .toList() ??
+        [];
     final leadingSpacers =
-        widget.leading?.map((e) => e.isFlexibleSpace ? 'flexible' : (e.isFixedSpace ? 'fixed' : '')).toList() ?? [];
+        widget.leading
+            ?.map(
+              (e) => e.isFlexibleSpace
+                  ? 'flexible'
+                  : (e.isFixedSpace ? 'fixed' : ''),
+            )
+            .toList() ??
+        [];
     final leadingTints =
-        widget.leading?.map((e) => resolveColorToArgb(e.tint, context) ?? 0).toList() ?? [];
+        widget.leading
+            ?.map((e) => resolveColorToArgb(e.tint, context) ?? 0)
+            .toList() ??
+        [];
     final leadingBadgeValues =
         widget.leading?.map((e) => e.badgeValue ?? '').toList() ?? [];
     final leadingBadgeColors =
-        widget.leading?.map((e) => resolveColorToArgb(e.badgeColor, context) ?? 0).toList() ?? [];
+        widget.leading
+            ?.map((e) => resolveColorToArgb(e.badgeColor, context) ?? 0)
+            .toList() ??
+        [];
     final trailingIcons =
-        widget.trailing?.map((e) => e.isSpacer ? '' : (e.icon?.name ?? '')).toList() ?? [];
+        widget.trailing
+            ?.map((e) => e.isSpacer ? '' : (e.icon?.name ?? ''))
+            .toList() ??
+        [];
     final trailingLabels =
-        widget.trailing?.map((e) => e.isSpacer ? '' : (e.label ?? '')).toList() ?? [];
+        widget.trailing
+            ?.map((e) => e.isSpacer ? '' : (e.label ?? ''))
+            .toList() ??
+        [];
     final trailingPaddings =
         widget.trailing?.map((e) => e.padding ?? 0.0).toList() ?? [];
     final trailingLabelSizes =
         widget.trailing?.map((e) => e.labelSize ?? 0.0).toList() ?? [];
     final trailingIconSizes =
-        widget.trailing?.map((e) => e.iconSize ?? e.icon?.size ?? 0.0).toList() ?? [];
+        widget.trailing
+            ?.map((e) => e.iconSize ?? e.icon?.size ?? 0.0)
+            .toList() ??
+        [];
     final trailingSpacers =
-        widget.trailing?.map((e) => e.isFlexibleSpace ? 'flexible' : (e.isFixedSpace ? 'fixed' : '')).toList() ?? [];
+        widget.trailing
+            ?.map(
+              (e) => e.isFlexibleSpace
+                  ? 'flexible'
+                  : (e.isFixedSpace ? 'fixed' : ''),
+            )
+            .toList() ??
+        [];
     final trailingTints =
-        widget.trailing?.map((e) => resolveColorToArgb(e.tint, context) ?? 0).toList() ?? [];
+        widget.trailing
+            ?.map((e) => resolveColorToArgb(e.tint, context) ?? 0)
+            .toList() ??
+        [];
     final trailingBadgeValues =
         widget.trailing?.map((e) => e.badgeValue ?? '').toList() ?? [];
     final trailingBadgeColors =
-        widget.trailing?.map((e) => resolveColorToArgb(e.badgeColor, context) ?? 0).toList() ?? [];
+        widget.trailing
+            ?.map((e) => resolveColorToArgb(e.badgeColor, context) ?? 0)
+            .toList() ??
+        [];
+    final leadingImageAssets =
+        widget.leading?.map((e) => e.imageAsset ?? '').toList() ?? [];
+    final trailingImageAssets =
+        widget.trailing?.map((e) => e.imageAsset ?? '').toList() ?? [];
 
     // Collect popup menu data for native implementation
-    final leadingPopupMenus = widget.leading?.map((action) {
-      if (action.hasPopupMenu) {
-        return action.popupMenuItems!.map((item) {
-          if (item is CNPopupMenuItem) {
-            return {
-              'type': 'item',
-              'label': item.label,
-              'icon': item.icon?.name ?? '',
-              'enabled': item.enabled,
-            };
-          } else if (item is CNPopupMenuDivider) {
-            return {
-              'type': 'divider',
-            };
+    final leadingPopupMenus =
+        widget.leading?.map((action) {
+          if (action.hasPopupMenu) {
+            return action.popupMenuItems!
+                .map((item) {
+                  if (item is CNPopupMenuItem) {
+                    return {
+                      'type': 'item',
+                      'label': item.label,
+                      'icon': item.icon?.name ?? '',
+                      'enabled': item.enabled,
+                    };
+                  } else if (item is CNPopupMenuDivider) {
+                    return {'type': 'divider'};
+                  }
+                  return null;
+                })
+                .where((item) => item != null)
+                .toList();
           }
           return null;
-        }).where((item) => item != null).toList();
-      }
-      return null;
-    }).toList() ?? [];
+        }).toList() ??
+        [];
 
-    final trailingPopupMenus = widget.trailing?.map((action) {
-      if (action.hasPopupMenu) {
-        return action.popupMenuItems!.map((item) {
-          if (item is CNPopupMenuItem) {
-            return {
-              'type': 'item',
-              'label': item.label,
-              'icon': item.icon?.name ?? '',
-              'enabled': item.enabled,
-            };
-          } else if (item is CNPopupMenuDivider) {
-            return {
-              'type': 'divider',
-            };
+    final trailingPopupMenus =
+        widget.trailing?.map((action) {
+          if (action.hasPopupMenu) {
+            return action.popupMenuItems!
+                .map((item) {
+                  if (item is CNPopupMenuItem) {
+                    return {
+                      'type': 'item',
+                      'label': item.label,
+                      'icon': item.icon?.name ?? '',
+                      'enabled': item.enabled,
+                    };
+                  } else if (item is CNPopupMenuDivider) {
+                    return {'type': 'divider'};
+                  }
+                  return null;
+                })
+                .where((item) => item != null)
+                .toList();
           }
           return null;
-        }).where((item) => item != null).toList();
-      }
-      return null;
-    }).toList() ?? [];
+        }).toList() ??
+        [];
 
     // Use title only if no segmented control is present
     final effectiveTitle = hasSegmentedControl ? '' : (widget.title ?? '');
@@ -617,6 +715,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       'leadingTints': leadingTints,
       'leadingBadgeValues': leadingBadgeValues,
       'leadingBadgeColors': leadingBadgeColors,
+      'leadingImageAssets': leadingImageAssets,
       'leadingPopupMenus': leadingPopupMenus,
       'trailingIcons': trailingIcons,
       'trailingLabels': trailingLabels,
@@ -627,6 +726,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       'trailingTints': trailingTints,
       'trailingBadgeValues': trailingBadgeValues,
       'trailingBadgeColors': trailingBadgeColors,
+      'trailingImageAssets': trailingImageAssets,
       'trailingPopupMenus': trailingPopupMenus,
       'largeTitle': widget.largeTitle,
       'transparent': widget.transparent,
@@ -635,9 +735,25 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       // Segmented control parameters for native rendering in title view
       'hasSegmentedControl': hasSegmentedControl,
       'segmentedControlLabels': widget.segmentedControlLabels ?? [],
-      'segmentedControlSelectedIndex': widget.segmentedControlSelectedIndex ?? 0,
+      'segmentedControlSelectedIndex':
+          widget.segmentedControlSelectedIndex ?? 0,
       'segmentedControlHeight': widget.segmentedControlHeight ?? 28.0,
-      'segmentedControlTint': resolveColorToArgb(widget.segmentedControlTint ?? _effectiveTint, context),
+      'segmentedControlLabelSize': widget.segmentedControlLabelSize ?? 0.0,
+      'segmentedControlTint': resolveColorToArgb(
+        widget.segmentedControlTint ?? _effectiveTint,
+        context,
+      ),
+      // Selected-segment background + per-state label colors (omitted when unset
+      // so the native side keeps its default behavior).
+      if (widget.segmentedControlSelectedColor != null)
+        'segmentedControlSelectedColor':
+            resolveColorToArgb(widget.segmentedControlSelectedColor, context),
+      if (widget.segmentedControlLabelColor != null)
+        'segmentedControlLabelColor':
+            resolveColorToArgb(widget.segmentedControlLabelColor, context),
+      if (widget.segmentedControlSelectedLabelColor != null)
+        'segmentedControlSelectedLabelColor': resolveColorToArgb(
+            widget.segmentedControlSelectedLabelColor, context),
     };
 
     final viewType = 'CupertinoNativeNavigationBar';
@@ -646,7 +762,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
             viewType: viewType,
             creationParams: creationParams,
             creationParamsCodec: const StandardMessageCodec(),
-            onPlatformViewCreated: _onCreated, 
+            onPlatformViewCreated: _onCreated,
           )
         : AppKitView(
             viewType: viewType,
@@ -656,7 +772,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
           );
 
     final h = widget.height ?? _intrinsicHeight ?? 44.0;
-    
+
     // Native platform view handles segmented control rendering in title view
     return SizedBox(height: h, child: platformView);
   }
@@ -704,7 +820,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       final location = args?['location'] as String?;
       final actionIndex = (args?['actionIndex'] as num?)?.toInt() ?? 0;
       final menuIndex = (args?['menuIndex'] as num?)?.toInt() ?? 0;
-      
+
       if (location == 'leading' &&
           actionIndex >= 0 &&
           widget.leading != null &&
@@ -830,10 +946,17 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       }
     } else if (action.hasPopupMenu) {
       // Use traditional popup menu fallback
-      final child = action.icon != null 
-          ? CNIcon(symbol: action.icon!, size: action.iconSize, color: action.tint)
-          : Text(action.label ?? '', style: action.tint != null ? TextStyle(color: action.tint) : null);
-      
+      final child = action.icon != null
+          ? CNIcon(
+              symbol: action.icon!,
+              size: action.iconSize,
+              color: action.tint,
+            )
+          : Text(
+              action.label ?? '',
+              style: action.tint != null ? TextStyle(color: action.tint) : null,
+            );
+
       return CupertinoButton(
         padding: EdgeInsets.zero,
         onPressed: () async {
@@ -880,10 +1003,17 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       );
     } else {
       // Regular action button
-      final child = action.icon != null 
-          ? CNIcon(symbol: action.icon!, size: action.iconSize, color: action.tint)
-          : Text(action.label ?? '', style: action.tint != null ? TextStyle(color: action.tint) : null);
-      
+      final child = action.icon != null
+          ? CNIcon(
+              symbol: action.icon!,
+              size: action.iconSize,
+              color: action.tint,
+            )
+          : Text(
+              action.label ?? '',
+              style: action.tint != null ? TextStyle(color: action.tint) : null,
+            );
+
       return CupertinoButton(
         padding: EdgeInsets.zero,
         onPressed: action.onPressed,
@@ -953,10 +1083,7 @@ class _CNNavigationBarSearchState extends State<CNNavigationBar>
       onPressed: _expandSearch,
     );
 
-    final trailingWithSearch = [
-      ...?widget.trailing,
-      searchAction,
-    ];
+    final trailingWithSearch = [...?widget.trailing, searchAction];
 
     return CNNavigationBar(
       leading: widget.leading,
@@ -972,7 +1099,7 @@ class _CNNavigationBarSearchState extends State<CNNavigationBar>
 
   Widget _buildSearchView() {
     final config = widget.searchConfig!;
-    
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Stack(
@@ -1008,12 +1135,12 @@ class _CNNavigationBarSearchState extends State<CNNavigationBar>
 }
 
 /// State class for scrollable navigation bar with UINavigationController.
-/// 
+///
 /// This creates a native UINavigationController with the navigation bar
 /// and content in a UIScrollView, enabling proper large title collapse behavior.
 class _CNNavigationBarScrollableState extends State<CNNavigationBar> {
   MethodChannel? _channel;
-  
+
   @override
   void dispose() {
     _channel?.setMethodCallHandler(null);
@@ -1073,7 +1200,9 @@ class _CNNavigationBarScrollableState extends State<CNNavigationBar> {
             if (widget.largeTitle)
               // Use CupertinoSliverNavigationBar for large title with collapse behavior
               CupertinoSliverNavigationBar(
-                largeTitle: widget.title != null ? Text(widget.title!) : const Text(''),
+                largeTitle: widget.title != null
+                    ? Text(widget.title!)
+                    : const Text(''),
                 leading: leadingWidget,
                 trailing: trailingWidget,
                 backgroundColor: widget.transparent
@@ -1121,9 +1250,7 @@ class _CNNavigationBarScrollableState extends State<CNNavigationBar> {
           tint: widget.tint,
           height: widget.height,
         ),
-        Expanded(
-          child: widget.scrollableContent ?? const SizedBox.shrink(),
-        ),
+        Expanded(child: widget.scrollableContent ?? const SizedBox.shrink()),
       ],
     );
   }
@@ -1152,7 +1279,11 @@ class _SmallNavigationBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 44.0 + MediaQuery.of(context).padding.top;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     final backgroundColor = transparent
         ? CupertinoColors.transparent
         : CupertinoTheme.of(context).barBackgroundColor;

@@ -20,6 +20,7 @@ class CNSegmentedControl extends StatefulWidget {
     this.color,
     this.height = 32.0,
     this.shrinkWrap = false,
+    this.labelSize,
     this.sfSymbols,
     this.iconSize,
     this.iconColor,
@@ -48,6 +49,9 @@ class CNSegmentedControl extends StatefulWidget {
 
   /// If true, sizes the control to its intrinsic width.
   final bool shrinkWrap;
+
+  /// Font size for the segment labels.
+  final double? labelSize;
 
   /// Optional SF Symbols for segments; complements [labels].
   final List<CNSymbol>? sfSymbols;
@@ -127,6 +131,7 @@ class _CNSegmentedControlState extends State<CNSegmentedControl> {
       'isDark': _isDark,
       'style': encodeStyle(context, tint: widget.color)
         ..addAll({
+          if (widget.labelSize != null) 'labelSize': widget.labelSize,
           if (widget.iconSize != null) 'iconSize': widget.iconSize,
           if (widget.iconColor != null)
             'iconColor': resolveColorToArgb(widget.iconColor, context),

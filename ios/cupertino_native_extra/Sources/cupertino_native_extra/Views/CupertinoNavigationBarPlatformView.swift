@@ -13,8 +13,10 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   private var leadingPopupMenus: [Any?] = []
   private var middlePopupMenus: [Any?] = []
   private var trailingPopupMenus: [Any?] = []
+  private let registrar: FlutterPluginRegistrar
 
-  init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
+  init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger, registrar: FlutterPluginRegistrar) {
+    self.registrar = registrar
     self.channel = FlutterMethodChannel(name: "CupertinoNativeNavigationBar_\(viewId)", binaryMessenger: messenger)
     self.container = UIView(frame: frame)
     self.navigationBar = UINavigationBar(frame: .zero)
@@ -32,6 +34,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     var leadingTints: [Int] = []
     var leadingBadgeValues: [String] = []
     var leadingBadgeColors: [Int] = []
+    var leadingImageAssets: [String] = []
     var middleIcons: [String] = []
     var middleLabels: [String] = []
     var middlePaddings: [Double] = []
@@ -47,6 +50,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     var trailingTints: [Int] = []
     var trailingBadgeValues: [String] = []
     var trailingBadgeColors: [Int] = []
+    var trailingImageAssets: [String] = []
     var largeTitle: Bool = false
     var transparent: Bool = false
     var isDark: Bool = false
@@ -56,7 +60,11 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     var segmentedControlLabels: [String] = []
     var segmentedControlSelectedIndex: Int = 0
     var segmentedControlHeight: Double = 28.0
+    var segmentedControlLabelSize: Double = 0
     var segmentedControlTint: UIColor? = nil
+    var segmentedControlSelectedColor: UIColor? = nil
+    var segmentedControlLabelColor: UIColor? = nil
+    var segmentedControlSelectedLabelColor: UIColor? = nil
 
     if let dict = args as? [String: Any] {
       title = (dict["title"] as? String) ?? ""
@@ -71,6 +79,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       leadingTints = (dict["leadingTints"] as? [Int]) ?? []
       leadingBadgeValues = (dict["leadingBadgeValues"] as? [String]) ?? []
       leadingBadgeColors = (dict["leadingBadgeColors"] as? [Int]) ?? []
+      leadingImageAssets = (dict["leadingImageAssets"] as? [String]) ?? []
       middleIcons = (dict["middleIcons"] as? [String]) ?? []
       middleLabels = (dict["middleLabels"] as? [String]) ?? []
       middlePaddings = (dict["middlePaddings"] as? [Double]) ?? []
@@ -86,6 +95,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       trailingTints = (dict["trailingTints"] as? [Int]) ?? []
       trailingBadgeValues = (dict["trailingBadgeValues"] as? [String]) ?? []
       trailingBadgeColors = (dict["trailingBadgeColors"] as? [Int]) ?? []
+      trailingImageAssets = (dict["trailingImageAssets"] as? [String]) ?? []
       leadingPopupMenus = (dict["leadingPopupMenus"] as? [Any?]) ?? []
       middlePopupMenus = (dict["middlePopupMenus"] as? [Any?]) ?? []
       trailingPopupMenus = (dict["trailingPopupMenus"] as? [Any?]) ?? []
@@ -94,8 +104,18 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       segmentedControlLabels = (dict["segmentedControlLabels"] as? [String]) ?? []
       segmentedControlSelectedIndex = (dict["segmentedControlSelectedIndex"] as? Int) ?? 0
       segmentedControlHeight = (dict["segmentedControlHeight"] as? Double) ?? 28.0
+      segmentedControlLabelSize = (dict["segmentedControlLabelSize"] as? Double) ?? 0
       if let tintValue = dict["segmentedControlTint"] as? NSNumber {
         segmentedControlTint = Self.colorFromARGB(tintValue.intValue)
+      }
+      if let v = dict["segmentedControlSelectedColor"] as? NSNumber {
+        segmentedControlSelectedColor = Self.colorFromARGB(v.intValue)
+      }
+      if let v = dict["segmentedControlLabelColor"] as? NSNumber {
+        segmentedControlLabelColor = Self.colorFromARGB(v.intValue)
+      }
+      if let v = dict["segmentedControlSelectedLabelColor"] as? NSNumber {
+        segmentedControlSelectedLabelColor = Self.colorFromARGB(v.intValue)
       }
       if let v = dict["largeTitle"] as? NSNumber { largeTitle = v.boolValue }
       if let v = dict["transparent"] as? NSNumber { transparent = v.boolValue }
@@ -172,7 +192,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     if !leadingIcons.isEmpty || !leadingLabels.isEmpty {
       var barItems: [UIBarButtonItem] = []
       let count = max(leadingIcons.count, leadingLabels.count)
-      
+
       var currentGroupIcons: [String] = []
       var currentGroupLabels: [String] = []
       var currentGroupPaddings: [Double] = []
@@ -182,8 +202,9 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       var currentGroupTints: [Int] = []
       var currentGroupBadgeValues: [String] = []
       var currentGroupBadgeColors: [Int] = []
+      var currentGroupImageAssets: [String] = []
       var pendingSpacing: Double = 0.0  // Track spacing to add to next button
-      
+
       func finalizeCurrentGroup() {
         if !currentGroupIcons.isEmpty || !currentGroupLabels.isEmpty {
           let buttonGroup = createButtonGroup(
@@ -192,6 +213,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
             paddings: currentGroupPaddings,
             labelSizes: currentGroupLabelSizes,
             iconSizes: currentGroupIconSizes,
+            imageAssets: currentGroupImageAssets,
             pillHeight: pillHeight,
             tint: tint,
             tints: currentGroupTints,
@@ -203,7 +225,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
             popupMenus: leadingPopupMenus,
             location: "leading"
           )
-          
+
           // Set tags for all buttons in the group
           let buttons = findAllButtons(in: buttonGroup)
           for (idx, button) in buttons.enumerated() {
@@ -211,10 +233,10 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
               button.tag = currentGroupIndices[idx]
             }
           }
-          
+
           let barItem = UIBarButtonItem(customView: buttonGroup)
           barItems.append(barItem)
-          
+
           currentGroupIcons = []
           currentGroupLabels = []
           currentGroupPaddings = []
@@ -222,13 +244,14 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           currentGroupIconSizes = []
           currentGroupIndices = []
           currentGroupTints = []
+          currentGroupImageAssets = []
           pendingSpacing = 0.0
         }
       }
-      
+
       for i in 0..<count {
         let spacerType = i < leadingSpacers.count ? leadingSpacers[i] : ""
-        
+
         if spacerType == "flexible" {
           // Finalize current group and add flexible space
           finalizeCurrentGroup()
@@ -238,13 +261,13 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           // Fixed space - split between previous and next button
           let fixedSpaceWidth = i < leadingPaddings.count ? leadingPaddings[i] : 0
           let halfSpace = fixedSpaceWidth / 2.0
-          
+
           // Add half to the previous button if it exists
           if !currentGroupPaddings.isEmpty {
             let lastIndex = currentGroupPaddings.count - 1
             currentGroupPaddings[lastIndex] += halfSpace
           }
-          
+
           // Store the other half for the next button
           pendingSpacing = halfSpace
         } else {
@@ -255,11 +278,11 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           let labelSize = i < leadingLabelSizes.count ? leadingLabelSizes[i] : 0.0
           let iconSize = i < leadingIconSizes.count ? leadingIconSizes[i] : 0.0
           let tintValue = i < leadingTints.count ? leadingTints[i] : 0
-          
+
           // Add any pending spacing from a previous fixedSpace
           padding += pendingSpacing
           pendingSpacing = 0.0
-          
+
           currentGroupIcons.append(icon)
           currentGroupLabels.append(label)
           currentGroupPaddings.append(padding)
@@ -267,17 +290,18 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           currentGroupIconSizes.append(iconSize)
           currentGroupIndices.append(i)
           currentGroupTints.append(tintValue)
-          
+          currentGroupImageAssets.append(i < leadingImageAssets.count ? leadingImageAssets[i] : "")
+
           let badgeValue = i < leadingBadgeValues.count ? leadingBadgeValues[i] : ""
           let badgeColor = i < leadingBadgeColors.count ? leadingBadgeColors[i] : 0
           currentGroupBadgeValues.append(badgeValue)
           currentGroupBadgeColors.append(badgeColor)
         }
       }
-      
+
       // Finalize any remaining group
       finalizeCurrentGroup()
-      
+
       navigationItem.leftBarButtonItems = barItems
     }
 
@@ -435,13 +459,40 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       segmentedControl.addTarget(self, action: #selector(segmentedControlValueChanged(_:)), for: .valueChanged)
       segmentedControl.translatesAutoresizingMaskIntoConstraints = false
       
-      // Apply tint color if specified (use segmentedControlTint first, fallback to general tint)
-      if let segTint = segmentedControlTint {
-        segmentedControl.selectedSegmentTintColor = segTint
-      } else if let tintColor = tint {
-        segmentedControl.selectedSegmentTintColor = tintColor
+      // Apply label size if specified
+      if segmentedControlLabelSize > 0 {
+        if #available(iOS 13.0, *) {
+          var attrs = segmentedControl.titleTextAttributes(for: .normal) ?? [:]
+          attrs[.font] = UIFont.systemFont(ofSize: CGFloat(segmentedControlLabelSize))
+          segmentedControl.setTitleTextAttributes(attrs, for: .normal)
+        }
       }
       
+      // Overall control ("track") background. `segmentedControlTint` matches
+      // Android's semantics where it colors the whole control background.
+      if let segTint = segmentedControlTint {
+        segmentedControl.backgroundColor = segTint
+      }
+
+      // Selected-segment ("thumb") background. Only set when explicitly given so
+      // an unset value keeps iOS's default selected appearance.
+      if let segSelected = segmentedControlSelectedColor {
+        segmentedControl.selectedSegmentTintColor = segSelected
+      }
+
+      // Per-state label colors. Only override the attribute that was provided so
+      // unset states keep the system default.
+      if let normalColor = segmentedControlLabelColor {
+        var attrs = segmentedControl.titleTextAttributes(for: .normal) ?? [:]
+        attrs[.foregroundColor] = normalColor
+        segmentedControl.setTitleTextAttributes(attrs, for: .normal)
+      }
+      if let selectedColor = segmentedControlSelectedLabelColor {
+        var attrs = segmentedControl.titleTextAttributes(for: .selected) ?? [:]
+        attrs[.foregroundColor] = selectedColor
+        segmentedControl.setTitleTextAttributes(attrs, for: .selected)
+      }
+
       // Add segmented control to scroll view
       scrollView.addSubview(segmentedControl)
       
@@ -523,7 +574,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     if !trailingIcons.isEmpty || !trailingLabels.isEmpty {
       var trailingBarItems: [UIBarButtonItem] = []
       let count = max(trailingIcons.count, trailingLabels.count)
-      
+
       var currentGroupIcons: [String] = []
       var currentGroupLabels: [String] = []
       var currentGroupPaddings: [Double] = []
@@ -533,8 +584,9 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       var currentGroupTints: [Int] = []
       var currentGroupBadgeValues: [String] = []
       var currentGroupBadgeColors: [Int] = []
+      var currentGroupImageAssets: [String] = []
       var pendingSpacing: Double = 0.0  // Track spacing to add to next button
-      
+
       func finalizeCurrentGroup() {
         if !currentGroupIcons.isEmpty || !currentGroupLabels.isEmpty {
           let buttonGroup = createButtonGroup(
@@ -543,6 +595,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
             paddings: currentGroupPaddings,
             labelSizes: currentGroupLabelSizes,
             iconSizes: currentGroupIconSizes,
+            imageAssets: currentGroupImageAssets,
             pillHeight: pillHeight,
             tint: tint,
             tints: currentGroupTints,
@@ -554,7 +607,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
             popupMenus: trailingPopupMenus,
             location: "trailing"
           )
-          
+
           // Set tags for all buttons in the group
           let buttons = findAllButtons(in: buttonGroup)
           for (idx, button) in buttons.enumerated() {
@@ -562,10 +615,10 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
               button.tag = 2000 + currentGroupIndices[idx]
             }
           }
-          
+
           let barItem = UIBarButtonItem(customView: buttonGroup)
           trailingBarItems.append(barItem)
-          
+
           currentGroupIcons = []
           currentGroupLabels = []
           currentGroupPaddings = []
@@ -573,13 +626,14 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           currentGroupIconSizes = []
           currentGroupIndices = []
           currentGroupTints = []
+          currentGroupImageAssets = []
           pendingSpacing = 0.0
         }
       }
-      
+
       for i in 0..<count {
         let spacerType = i < trailingSpacers.count ? trailingSpacers[i] : ""
-        
+
         if spacerType == "flexible" {
           // Finalize current group and add flexible space
           finalizeCurrentGroup()
@@ -589,13 +643,13 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           // Fixed space - split between previous and next button
           let fixedSpaceWidth = i < trailingPaddings.count ? trailingPaddings[i] : 0
           let halfSpace = fixedSpaceWidth / 2.0
-          
+
           // Add half to the previous button if it exists
           if !currentGroupPaddings.isEmpty {
             let lastIndex = currentGroupPaddings.count - 1
             currentGroupPaddings[lastIndex] += halfSpace
           }
-          
+
           // Store the other half for the next button
           pendingSpacing = halfSpace
         } else {
@@ -606,11 +660,11 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           let labelSize = i < trailingLabelSizes.count ? trailingLabelSizes[i] : 0.0
           let iconSize = i < trailingIconSizes.count ? trailingIconSizes[i] : 0.0
           let tintValue = i < trailingTints.count ? trailingTints[i] : 0
-          
+
           // Add any pending spacing from a previous fixedSpace
           padding += pendingSpacing
           pendingSpacing = 0.0
-          
+
           currentGroupIcons.append(icon)
           currentGroupLabels.append(label)
           currentGroupPaddings.append(padding)
@@ -618,14 +672,15 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           currentGroupIconSizes.append(iconSize)
           currentGroupIndices.append(i)
           currentGroupTints.append(tintValue)
-          
+          currentGroupImageAssets.append(i < trailingImageAssets.count ? trailingImageAssets[i] : "")
+
           let badgeValue = i < trailingBadgeValues.count ? trailingBadgeValues[i] : ""
           let badgeColor = i < trailingBadgeColors.count ? trailingBadgeColors[i] : 0
           currentGroupBadgeValues.append(badgeValue)
           currentGroupBadgeColors.append(badgeColor)
         }
       }
-      
+
       // Finalize any remaining group
       finalizeCurrentGroup()
       
@@ -890,6 +945,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     paddings: [Double],
     labelSizes: [Double],
     iconSizes: [Double],
+    imageAssets: [String] = [],
     pillHeight: Double?,
     tint: UIColor?,
     tints: [Int] = [],
@@ -963,7 +1019,19 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       button.addTarget(target, action: #selector(buttonTouchDown(_:)), for: .touchDown)
       button.addTarget(target, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
       
-      if i < icons.count, !icons[i].isEmpty, let image = UIImage(systemName: icons[i]) {
+      if i < imageAssets.count, !imageAssets[i].isEmpty {
+        let key = registrar.lookupKey(forAsset: imageAssets[i])
+        if let path = Bundle.main.path(forResource: key, ofType: nil),
+           let image = UIImage(contentsOfFile: path) {
+          let size = i < iconSizes.count && iconSizes[i] > 0 ? CGFloat(iconSizes[i]) : 24
+          let scaled = UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: CGSize(width: size, height: size)))
+          }
+          let hasTint = (i < tints.count && tints[i] != 0) || tint != nil
+          let renderingMode: UIImage.RenderingMode = hasTint ? .alwaysTemplate : .alwaysOriginal
+          button.setImage(scaled.withRenderingMode(renderingMode), for: .normal)
+        }
+      } else if i < icons.count, !icons[i].isEmpty, let image = UIImage(systemName: icons[i]) {
         let iconSize = i < iconSizes.count && iconSizes[i] > 0 ? CGFloat(iconSizes[i]) : 17
         let config = UIImage.SymbolConfiguration(pointSize: iconSize, weight: .semibold)
         button.setImage(image.withConfiguration(config), for: .normal)

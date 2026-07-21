@@ -93,10 +93,6 @@ class _CNPullDownButtonAnchorState extends State<CNPullDownButtonAnchor> {
   MethodChannel? _channel;
   bool? _lastIsDark;
   int? _lastTint;
-  String? _lastTitle;
-  String? _lastIconName;
-  double? _lastIconSize;
-  int? _lastIconColor;
   double? _intrinsicWidth;
   CNButtonStyle? _lastStyle;
   Offset? _downPosition;
@@ -141,12 +137,7 @@ class _CNPullDownButtonAnchorState extends State<CNPullDownButtonAnchor> {
           onPressed: () => _showPullDownMenu(),
           child: widget.isIconButton
               ? Icon(
-                  widget.buttonIcon?.name.isNotEmpty == true
-                      ? IconData(
-                          widget.buttonIcon!.name.codeUnitAt(0),
-                          fontFamily: 'SF Pro Icons',
-                        )
-                      : CupertinoIcons.ellipsis_circle,
+                  CupertinoIcons.ellipsis_circle,
                   size: widget.buttonIcon?.size ?? 22,
                 )
               : Text(widget.buttonLabel ?? ''),
@@ -301,10 +292,6 @@ class _CNPullDownButtonAnchorState extends State<CNPullDownButtonAnchor> {
     ch.setMethodCallHandler(_onMethodCall);
     _lastTint = resolveColorToArgb(_effectiveTint, context);
     _lastIsDark = _isDark;
-    _lastTitle = widget.buttonLabel;
-    _lastIconName = widget.buttonIcon?.name;
-    _lastIconSize = widget.buttonIcon?.size;
-    _lastIconColor = resolveColorToArgb(widget.buttonIcon?.color, context);
     _lastStyle = widget.buttonStyle;
     if (!widget.isIconButton) {
       _requestIntrinsicSize();

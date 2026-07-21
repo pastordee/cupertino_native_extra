@@ -1,53 +1,161 @@
-## 0.2.0 - Extended Fork Release
+# Changelog
+
+All notable changes to the cupertino_native_extra plugin are documented in this file.
+
+## [0.2.4] - 2026-07-21
 
 ### Added
-- **iOS 26+ Native Tab Bar (Experimental)**: New `CNNativeTabBar` implementation providing true native UITabBarController experience
-  - Native tab bar with search support via `isSearchTab` property
-  - Proper Flutter view embedding using wrapper view controller pattern
-  - Search tab with UISearchController and expand/collapse functionality
-  - Complete demo page with navigation and search functionality
-
-- **Enhanced Sheet Components**:
-  - `dismissOnTap` property for `CNSheetInlineAction` to automatically dismiss sheets
-  - Improved inline action handling
-
-- **Comprehensive Documentation**:
-  - Attribution to original `serverpod/cupertino_native`
-  - Installation via Git instead of pub.dev
-  - Updated examples for new native components
+- `CNNavigationBar` segmented-control color options: `segmentedControlSelectedColor` (selected-segment background / `selectedSegmentTintColor`), `segmentedControlLabelColor` (unselected label text), and `segmentedControlSelectedLabelColor` (selected label text). Applied natively on iOS via `titleTextAttributes`.
 
 ### Changed
-- Repository migrated to GitHub: `pastordee/cupertino_native_extra`
-- Tab bar architecture to support native UITabBarController
-- Updated demo pages for native tab bar showcase
-- Improved error handling in Swift method channels
+- `segmentedControlTint` now sets the segmented control's overall track `backgroundColor` on iOS (matching the Material/Android semantics) instead of the selected-segment background. Use `segmentedControlSelectedColor` for the selected-segment background.
+
+## [0.2.3] - 2026-05-30
 
 ### Fixed
-- Syntax error in demo (stray character removed)
-- Sheet inline action dismissal behavior
-- Search tab interaction handling
+- `imageAsset` on `CNNavigationBarAction` now respects `tint`. When a tint color is set (per-action or global), the image is rendered as a template so `tintColor` applies. Without a tint the image renders at original colors.
 
-### Known Limitations
-- iOS 13.0+ only (iOS 26 UI appearance on iOS 14+)
-- macOS support available but styling pending
-- FlutterViewController has strict UIKit hierarchy requirements
+## [0.2.2] - 2026-05-30
 
-### Attribution
-This extended fork extends and maintains compatibility with the original `serverpod/cupertino_native` package.
-Original source: https://github.com/serverpod/cupertino_native
+### Changed
+- Replaced `imageBytes: Uint8List?` with `imageAsset: String?` on `CNNavigationBarAction`. Pass a Flutter asset path (e.g. `'assets/my_icon.png'`) and the native side resolves it via the plugin registrar — no manual byte-loading required. iOS uses `UIImage(contentsOfFile:)` via `registrar.lookupKey(forAsset:)`; macOS uses `NSImage(contentsOf:)`.
 
-## 0.1.1
+## [0.2.1] - 2026-05-30
 
-* Adds link to blog post in readme.
+### Added
+- `imageBytes` field on `CNNavigationBarAction` — pass raw PNG/JPEG bytes (`Uint8List`) to render a custom image icon instead of an SF Symbol.
 
-## 0.1.0
+## [0.2.0+6] - 2026-05-24
 
-* Cleaned up API.
-* Added polished (somewhat) examples.
-* Compiles and runs on MacOS.
-* Much improved readme file.
-* Dart doc and analyzer requirement.
+### Fixed
+- `selectedIndex` is now a stored property on `CupertinoTabBarPlatformView` (was only a local `init` variable). The `setCustomImage` fix in 0.2.0+5 always re-selected index 0 because `self.selectedIndex` resolved to the default. Now it correctly tracks whichever tab the user is on, and stays in sync via `setSelectedIndex`.
 
-## 0.0.1
+## [0.2.0+5] - 2026-05-24
 
-* Initial release (to reserve pub name).
+### Fixed
+- Tab bar selection no longer flickers during image loading. Native `setCustomImage` was rebuilding `UITabBarItem` objects, invalidating the old `selectedItem` pointer. Fixed in the Swift layer by re-applying `selectedItem` after each items rebuild, eliminating the visible deselection window entirely.
+
+## [0.2.0+4] - 2026-05-24
+
+### Fixed
+- Tab bar no longer loses selected index after custom images finish loading. Native rebuilds its items when receiving `setCustomImage` calls; the plugin now re-applies `setSelectedIndex` after all images are sent.
+- Removed unused state fields in `CNPullDownButtonAnchor` that caused analyzer warnings.
+- Replaced non-const `IconData` constructor in non-native fallback paths with a stable `CupertinoIcons` constant.
+
+## [0.2.0+1] - 2025-12-03
+
+### Added
+- Comprehensive library documentation for all core modules
+- Detailed class-level documentation for all public APIs
+- Apple HIG (Human Interface Guidelines) alignment documentation
+- SF Symbols rendering modes guide (monochrome, hierarchical, palette, multicolor)
+- Button style usage guide with best practices
+- Platform interface implementation guidance
+- Method channel communication pattern documentation
+- Color system documentation (ARGB conversion, dynamic color resolution)
+- Enhanced demo application with 19 well-commented screen examples
+- Best practices guides throughout codebase
+- Usage examples for all major components
+- Architecture overview documentation
+
+### Changed
+- Enhanced documentation in `cupertino_native.dart` with quick start guide
+- Improved platform interface documentation
+- Extended button style enum documentation with Apple HIG alignment
+- Expanded SF Symbol class documentation with rendering mode details
+- Enhanced channel parameter documentation with color conversion details
+- Reorganized example demos with comprehensive comments
+
+### Fixed
+- Removed unnecessary internal documentation files
+- Improved documentation clarity and consistency
+
+### Repository
+- Cleaned root directory (removed 32 unnecessary markdown files)
+- Renamed `docs/` directory to `doc/` per Pub conventions
+- Organized example application structure
+- Improved project layout for pub.dev publication
+
+## [0.2.0] - Earlier Release
+
+Previous version with stable native iOS widget implementations including:
+- Native Navigation Bars with liquid glass effects
+- Native Toolbars with blur effects
+- Native Buttons with 8 styles
+- Native Sliders and Switches
+- Native Segmented Controls
+- Native Popup Menus and Pull-Down Buttons
+- Native Tab Bars with badges
+- Native Search Bars with native controller integration
+- Native Action Sheets and Alerts
+- Native Bottom Sheets with detents
+- SF Symbols integration
+- Full dark mode support
+- iOS 14.0+ and macOS 11.0+ platform support
+
+---
+
+## Plugin Features Overview
+
+### Navigation Components
+- **CNNavigationBar** - Native iOS navigation bar with blur effect
+- **CNNavigationBar.scrollable** - Large title with smooth collapse animation
+- **CNToolbar** - Native iOS toolbar for top/bottom placement
+
+### Control Components
+- **CNButton** - 8 native iOS button styles
+- **CNSlider** - Native iOS slider with step support
+- **CNSwitch** - Native toggle switch
+- **CNSegmentedControl** - Native segmented control
+- **CNIcon** - SF Symbols with rendering modes
+
+### Menu & Popup Components
+- **CNPopupMenuButton** - Context menu from button
+- **CNPopupButton** - Dropdown selection menu
+- **CNPullDownButton** - Pull-down menu (iOS 13+)
+- **CNPullDownButtonAnchor** - Anchored popup menu (iOS 14+)
+
+### Search & Picker Components
+- **CNTabBar** - Native tab bar with badges
+- **CNSearchBar** - Native search bar with scope
+- **CNNativeSearchController** - Fullscreen search controller
+
+### Sheet & Dialog Components
+- **CNActionSheet** - Native action sheet/menu
+- **CNAlert** - Native alert dialog
+- **CNSheet** - Native bottom sheet with detents
+
+### Styling Components
+- **CNSymbol** - SF Symbol description (4 rendering modes)
+- **CNButtonStyle** - 8 button style options
+
+## Platform Support
+
+- **iOS**: 14.0 and later
+- **macOS**: 11.0 and later
+- **Flutter**: 3.3.0 and later
+- **Dart**: 3.9.0 and later
+
+## Breaking Changes
+
+None in this version.
+
+## Migration Guide
+
+For upgrading from previous versions:
+1. Update your pubspec.yaml to `cupertino_native_extra: ^0.2.0`
+2. Run `flutter pub get`
+3. No API changes required - fully backward compatible
+4. Refer to README.md and example app for best practices
+
+## Known Issues
+
+None currently known.
+
+## Contributing
+
+See GitHub repository for contribution guidelines.
+
+## License
+
+Licensed under the License file included in the repository.

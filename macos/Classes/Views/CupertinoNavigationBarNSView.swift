@@ -35,8 +35,10 @@ class CupertinoNavigationBarNSView: NSView {
   private var currentTitle: String = ""
   private var currentTint: NSColor? = nil
   private var isTransparent: Bool = false
+  private let registrar: FlutterPluginRegistrar
 
-  init(viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
+  init(viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger, registrar: FlutterPluginRegistrar) {
+    self.registrar = registrar
     self.channel = FlutterMethodChannel(name: "CupertinoNativeNavigationBar_\(viewId)", binaryMessenger: messenger)
     self.visualEffectView = NSVisualEffectView(frame: .zero)
     self.titleLabel = NSTextField(labelWithString: "")
@@ -47,6 +49,7 @@ class CupertinoNavigationBarNSView: NSView {
     var leadingPaddings: [Double] = []
     var leadingSpacers: [String] = []
     var leadingTints: [Int] = []
+    var leadingImageAssets: [String] = []
     var middleIcons: [String] = []
     var middleLabels: [String] = []
     var middlePaddings: [Double] = []
@@ -57,6 +60,7 @@ class CupertinoNavigationBarNSView: NSView {
     var trailingPaddings: [Double] = []
     var trailingSpacers: [String] = []
     var trailingTints: [Int] = []
+    var trailingImageAssets: [String] = []
     var transparent: Bool = false
     var isDark: Bool = false
     var tint: NSColor? = nil
@@ -70,6 +74,7 @@ class CupertinoNavigationBarNSView: NSView {
       leadingPaddings = (dict["leadingPaddings"] as? [Double]) ?? []
       leadingSpacers = (dict["leadingSpacers"] as? [String]) ?? []
       leadingTints = (dict["leadingTints"] as? [Int]) ?? []
+      leadingImageAssets = (dict["leadingImageAssets"] as? [String]) ?? []
       middleIcons = (dict["middleIcons"] as? [String]) ?? []
       middleLabels = (dict["middleLabels"] as? [String]) ?? []
       middlePaddings = (dict["middlePaddings"] as? [Double]) ?? []
@@ -80,6 +85,7 @@ class CupertinoNavigationBarNSView: NSView {
       trailingPaddings = (dict["trailingPaddings"] as? [Double]) ?? []
       trailingSpacers = (dict["trailingSpacers"] as? [String]) ?? []
       trailingTints = (dict["trailingTints"] as? [Int]) ?? []
+      trailingImageAssets = (dict["trailingImageAssets"] as? [String]) ?? []
       pillHeight = dict["pillHeight"] as? Double
       middleAlignment = (dict["middleAlignment"] as? String) ?? "center"
       if let v = dict["transparent"] as? NSNumber { transparent = v.boolValue }
@@ -122,6 +128,7 @@ class CupertinoNavigationBarNSView: NSView {
         icons: leadingIcons,
         labels: leadingLabels,
         paddings: leadingPaddings,
+        imageAssets: leadingImageAssets,
         pillHeight: pillHeight,
         tint: tint,
         tints: leadingTints,
@@ -146,6 +153,7 @@ class CupertinoNavigationBarNSView: NSView {
         icons: trailingIcons,
         labels: trailingLabels,
         paddings: trailingPaddings,
+        imageAssets: trailingImageAssets,
         pillHeight: pillHeight,
         tint: tint,
         tints: trailingTints,
@@ -300,6 +308,7 @@ class CupertinoNavigationBarNSView: NSView {
     icons: [String],
     labels: [String],
     paddings: [Double],
+    imageAssets: [String] = [],
     pillHeight: Double?,
     tint: NSColor?,
     tints: [Int] = [],
@@ -369,7 +378,19 @@ class CupertinoNavigationBarNSView: NSView {
       button.bezelStyle = .texturedRounded
       button.isBordered = false
       
-      if #available(macOS 11.0, *), i < icons.count, !icons[i].isEmpty,
+      if i < imageAssets.count, !imageAssets[i].isEmpty {
+        let key = registrar.lookupKey(forAsset: imageAssets[i])
+        if let url = Bundle.main.url(forResource: key, withExtension: nil),
+           let image = NSImage(contentsOf: url) {
+          image.size = NSSize(width: 16, height: 16)
+          let hasTint = (i < tints.count && tints[i] != 0) || tint != nil
+          if hasTint {
+            image.isTemplate = true
+          }
+          button.image = image
+          button.imagePosition = .imageOnly
+        }
+      } else if #available(macOS 11.0, *), i < icons.count, !icons[i].isEmpty,
          let image = NSImage(systemSymbolName: icons[i], accessibilityDescription: nil) {
         let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
         button.image = image.withSymbolConfiguration(config)
