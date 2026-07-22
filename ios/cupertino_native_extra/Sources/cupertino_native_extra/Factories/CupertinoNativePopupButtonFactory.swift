@@ -82,6 +82,11 @@ class CupertinoNativePopupButtonView: NSObject, FlutterPlatformView {
                     return outgoing
                 }
                 button.configuration = config
+                // Keep the title on a single line. The iOS 15+ configuration
+                // API allows multi-line titles by default, which wrapped long
+                // labels (e.g. "Deuteronomy" → "Deut/eron/omy").
+                button.titleLabel?.numberOfLines = 1
+                button.titleLabel?.lineBreakMode = .byTruncatingTail
                 button.sizeToFit()
             } else {
                 button.setTitle(title, for: .normal)
@@ -228,6 +233,11 @@ class CupertinoNativePopupButtonView: NSObject, FlutterPlatformView {
                     return outgoing
                 }
                 button.configuration = config
+                // Keep the title on a single line. The iOS 15+ configuration
+                // API allows multi-line titles by default, which wrapped long
+                // labels (e.g. "Deuteronomy" → "Deut/eron/omy").
+                button.titleLabel?.numberOfLines = 1
+                button.titleLabel?.lineBreakMode = .byTruncatingTail
                 button.sizeToFit()
             } else {
                 button.setTitle(title, for: .normal)
@@ -267,6 +277,10 @@ class CupertinoNativePopupButtonView: NSObject, FlutterPlatformView {
             }
             
             button.configuration = config
+            // Re-assert single line — reassigning the configuration resets the
+            // title label, so long labels would wrap again without this.
+            button.titleLabel?.numberOfLines = 1
+            button.titleLabel?.lineBreakMode = .byTruncatingTail
         } else {
             // Apply style the old way
             switch style {
