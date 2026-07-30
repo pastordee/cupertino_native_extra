@@ -89,7 +89,10 @@ class _CNButtonState extends State<CNButton> {
   Offset? _downPosition;
   bool _pressed = false;
 
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  // brightnessOf resolves a null Cupertino brightness to the platform
+  // brightness, so this tracks a live system light<->dark switch (and
+  // registers the dependency that triggers didChangeDependencies).
+  bool get _isDark => CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
   Color? get _effectiveTint =>
       widget.tint ?? CupertinoTheme.of(context).primaryColor;

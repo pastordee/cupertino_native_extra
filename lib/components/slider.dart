@@ -118,7 +118,10 @@ class _CNSliderState extends State<CNSlider> {
   int? _lastTrackTint;
   int? _lastTrackBgTint;
   double? _lastStep;
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  // brightnessOf resolves a null Cupertino brightness to the platform
+  // brightness, so this tracks a live system light<->dark switch (and
+  // registers the dependency that triggers didChangeDependencies).
+  bool get _isDark => CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
   CNSliderController? _internalController;
 

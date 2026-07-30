@@ -52,7 +52,10 @@ class _CNIconState extends State<CNIcon> {
   bool? _lastGradient;
   // No intrinsic sizing storage; icons use explicit size.
 
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  // brightnessOf resolves a null Cupertino brightness to the platform
+  // brightness, so this tracks a live system light<->dark switch (and
+  // registers the dependency that triggers didChangeDependencies).
+  bool get _isDark => CupertinoTheme.brightnessOf(context) == Brightness.dark;
 
   @override
   void didChangeDependencies() {

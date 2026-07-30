@@ -503,7 +503,10 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
   int? _lastTint;
   bool? _lastTransparent;
 
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  // brightnessOf resolves a null Cupertino brightness to the platform
+  // brightness, so this tracks a live system light<->dark switch (and
+  // registers the dependency that triggers didChangeDependencies).
+  bool get _isDark => CupertinoTheme.brightnessOf(context) == Brightness.dark;
   Color? get _effectiveTint =>
       widget.tint ?? CupertinoTheme.of(context).primaryColor;
 
@@ -757,14 +760,25 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
     };
 
     final viewType = 'CupertinoNativeNavigationBar';
+    // Re-key the platform view on brightness so it is recreated on a live
+    // light<->dark switch. The incremental setStyle/setBrightness path only
+    // updates the bar's global tint/appearance — it does NOT re-tint the custom
+    // action buttons (or the embedded segmented control), whose colours are
+    // baked from creationParams at creation. Recreating rebuilds them with the
+    // fresh per-action tints, so app-bar icons follow the theme instead of
+    // staying frozen until relaunch. (Only fires on an actual theme flip, so
+    // ordinary rebuilds don't recreate the view.)
+    final platformViewKey = ValueKey('cn_navbar_dark_$_isDark');
     final platformView = defaultTargetPlatform == TargetPlatform.iOS
         ? UiKitView(
+            key: platformViewKey,
             viewType: viewType,
             creationParams: creationParams,
             creationParamsCodec: const StandardMessageCodec(),
             onPlatformViewCreated: _onCreated,
           )
         : AppKitView(
+            key: platformViewKey,
             viewType: viewType,
             creationParams: creationParams,
             creationParamsCodec: const StandardMessageCodec(),

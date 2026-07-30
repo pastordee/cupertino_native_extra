@@ -276,7 +276,14 @@ class _CNTabBarState extends State<CNTabBar> {
   int? _lastRightCount;
   double? _lastSplitSpacing;
 
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  // Use brightnessOf (not CupertinoTheme.of(context).brightness): it resolves a
+  // null Cupertino brightness to MediaQuery.platformBrightnessOf, so the tab bar
+  // tracks a live system light<->dark switch and registers the dependency that
+  // makes didChangeDependencies fire. Under a MaterialApp with
+  // themeMode: system (and no cupertinoOverrideTheme in the dark theme), the
+  // old getter never flipped, so setBrightness never reached native and the
+  // template-rendered icons kept their previous appearance until relaunch.
+  bool get _isDark => CupertinoTheme.brightnessOf(context) == Brightness.dark;
   Color? get _effectiveTint =>
       widget.tint ?? CupertinoTheme.of(context).primaryColor;
 
