@@ -525,9 +525,19 @@ class _CNPullDownButtonState extends State<CNPullDownButton> {
   }
 
   Future<dynamic> _onMethodCall(MethodCall call) async {
-    if (call.method == 'itemSelected') {
-      final args = call.arguments as Map?;
-      final idx = (args?['index'] as num?)?.toInt();
+    // The native side sends 'onItemSelected' with a bare int index (see
+    // CupertinoPullDownButtonPlatformView.swift). Earlier this listened for
+    // 'itemSelected' and read a Map, so regular menu items never fired
+    // onSelected while inline actions did. Accept both names and both argument
+    // shapes (int, or {'index': int}) so it works regardless.
+    if (call.method == 'onItemSelected' || call.method == 'itemSelected') {
+      final args = call.arguments;
+      int? idx;
+      if (args is num) {
+        idx = args.toInt();
+      } else if (args is Map) {
+        idx = (args['index'] as num?)?.toInt();
+      }
       if (idx != null) widget.onSelected(idx);
     } else if (call.method == 'onInlineActionSelected') {
       final idx = (call.arguments as num?)?.toInt();
