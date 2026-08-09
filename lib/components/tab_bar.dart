@@ -571,10 +571,12 @@ class _CNTabBarState extends State<CNTabBar> {
     final badgeColors = widget.items
         .map((e) => resolveColorToArgb(e.badgeColor, context))
         .toList();
+    final bool imageKeysChanged =
+        _lastImageKeys?.join('|') != imageKeys.join('|');
     if (_lastLabels?.join('|') != labels.join('|') ||
         _lastLabelSizes?.join('|') != labelSizes.join('|') ||
         _lastSymbols?.join('|') != symbols.join('|') ||
-        _lastImageKeys?.join('|') != imageKeys.join('|') ||
+        imageKeysChanged ||
         _lastBadges?.join('|') != badges.join('|')) {
       await ch.invokeMethod('setItems', {
         'labels': labels,
@@ -590,8 +592,13 @@ class _CNTabBarState extends State<CNTabBar> {
       _lastSymbols = symbols;
       _lastImageKeys = imageKeys;
       _lastBadges = badges;
-      // Reload images if they changed
-      _loadAndSendImages();
+      // Only reload custom images when the images actually changed. A badge-only
+      // change keeps the same images — re-sending them triggers a native
+      // setCustomImage rebuild per tab, which is wasteful and (historically)
+      // dropped the badge/selection mid-update.
+      if (imageKeysChanged) {
+        _loadAndSendImages();
+      }
       // Re-measure width in case content changed
       _requestIntrinsicSize();
     }

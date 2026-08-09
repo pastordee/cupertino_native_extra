@@ -200,6 +200,10 @@ channel.setMethodCallHandler { [weak self] call, result in
           let badges = (args["badges"] as? [String]) ?? []
           let badgeColors = (args["badgeColors"] as? [NSNumber]) ?? []
           let selectedIndex = (args["selectedIndex"] as? NSNumber)?.intValue ?? 0
+          // Persist the selection so a later setCustomImage rebuild (which
+          // re-selects using self.selectedIndex) doesn't snap back to a stale
+          // index and visually jump to the wrong tab.
+          self.selectedIndex = selectedIndex
           self.currentLabels = labels
           self.currentSymbols = symbols
           self.currentBadges = badges
@@ -415,7 +419,17 @@ channel.setMethodCallHandler { [weak self] call, result in
                 img = UIImage(systemName: self.currentSymbols[i])
               }
               let title = (i < self.currentLabels.count) ? self.currentLabels[i] : nil
-              items.append(UITabBarItem(title: title, image: img, selectedImage: img))
+              let item = UITabBarItem(title: title, image: img, selectedImage: img)
+              // Re-apply the badge — rebuilding items here used to drop it, so a
+              // custom-image reload right after setItems wiped the tab dot.
+              if i < self.currentBadges.count && !self.currentBadges[i].isEmpty {
+                item.badgeValue = self.currentBadges[i]
+                if #available(iOS 10.0, *), i < self.currentBadgeColors.count,
+                   let colorInt = self.currentBadgeColors[i] {
+                  item.badgeColor = Self.colorFromARGB(colorInt)
+                }
+              }
+              items.append(item)
             }
             return items
           }
