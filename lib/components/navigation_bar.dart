@@ -11,6 +11,32 @@ import 'search_config.dart';
 import 'search_bar.dart';
 import 'segmented_control.dart';
 
+/// Serializes one popup-menu entry to the map the native nav bar reads.
+/// Submenus recurse into `children` so the Swift can build nested `UIMenu`s.
+Map<String, dynamic>? _serializePopupEntry(CNPopupMenuEntry item) {
+  if (item is CNPopupMenuItem) {
+    return {
+      'type': 'item',
+      'label': item.label,
+      'icon': item.icon?.name ?? '',
+      'enabled': item.enabled,
+    };
+  } else if (item is CNPopupMenuSubmenu) {
+    return {
+      'type': 'submenu',
+      'label': item.title,
+      'icon': item.icon?.name ?? '',
+      'children': item.children
+          .map(_serializePopupEntry)
+          .whereType<Map<String, dynamic>>()
+          .toList(),
+    };
+  } else if (item is CNPopupMenuDivider) {
+    return {'type': 'divider'};
+  }
+  return null;
+}
+
 /// Action item for navigation bar trailing/leading positions.
 class CNNavigationBarAction {
   /// Creates a navigation bar action item.
@@ -658,20 +684,8 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
         widget.leading?.map((action) {
           if (action.hasPopupMenu) {
             return action.popupMenuItems!
-                .map((item) {
-                  if (item is CNPopupMenuItem) {
-                    return {
-                      'type': 'item',
-                      'label': item.label,
-                      'icon': item.icon?.name ?? '',
-                      'enabled': item.enabled,
-                    };
-                  } else if (item is CNPopupMenuDivider) {
-                    return {'type': 'divider'};
-                  }
-                  return null;
-                })
-                .where((item) => item != null)
+                .map(_serializePopupEntry)
+                .whereType<Map<String, dynamic>>()
                 .toList();
           }
           return null;
@@ -682,20 +696,8 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
         widget.trailing?.map((action) {
           if (action.hasPopupMenu) {
             return action.popupMenuItems!
-                .map((item) {
-                  if (item is CNPopupMenuItem) {
-                    return {
-                      'type': 'item',
-                      'label': item.label,
-                      'icon': item.icon?.name ?? '',
-                      'enabled': item.enabled,
-                    };
-                  } else if (item is CNPopupMenuDivider) {
-                    return {'type': 'divider'};
-                  }
-                  return null;
-                })
-                .where((item) => item != null)
+                .map(_serializePopupEntry)
+                .whereType<Map<String, dynamic>>()
                 .toList();
           }
           return null;

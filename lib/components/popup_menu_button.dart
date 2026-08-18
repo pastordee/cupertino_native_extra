@@ -34,6 +34,27 @@ class CNPopupMenuDivider extends CNPopupMenuEntry {
   const CNPopupMenuDivider();
 }
 
+/// A nested submenu in a popup menu — renders as a row that opens a child menu
+/// (with a trailing chevron), like the iOS Notes app. Currently honoured by the
+/// navigation-bar popup/pull-down actions (see [CNNavigationBarAction]).
+class CNPopupMenuSubmenu extends CNPopupMenuEntry {
+  /// Creates a submenu with its own [children].
+  const CNPopupMenuSubmenu({
+    required this.title,
+    required this.children,
+    this.icon,
+  });
+
+  /// Title shown on the submenu row.
+  final String title;
+
+  /// Optional SF Symbol shown before the title.
+  final CNSymbol? icon;
+
+  /// The submenu's entries (items/dividers/nested submenus).
+  final List<CNPopupMenuEntry> children;
+}
+
 // Reusable style enum for buttons across widgets (popup menu, future CNButton, ...)
 
 /// A Cupertino-native popup menu button.

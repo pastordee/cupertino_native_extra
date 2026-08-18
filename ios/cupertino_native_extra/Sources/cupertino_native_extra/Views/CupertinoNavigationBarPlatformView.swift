@@ -906,34 +906,46 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   
   private func setupButtonMenu(button: UIButton, menuItems: [[String: Any]], actionIndex: Int, location: String) {
     if #available(iOS 14.0, *) {
-      var menuActions: [UIAction] = []
-      
-      for (menuIndex, item) in menuItems.enumerated() {
-        let type = item["type"] as? String ?? "item"
-        
-        if type == "item" {
-          let label = item["label"] as? String ?? ""
+      // Each entry (item, divider, submenu parent, and every submenu child) is
+      // assigned a flat depth-first index — parent before its children — so the
+      // Dart side can map the reported `menuIndex` back to an action. A flat
+      // menu (no submenus) keeps the same indices as before (backward compatible).
+      var flatIndex = 0
+      func build(_ items: [[String: Any]]) -> [UIMenuElement] {
+        var elements: [UIMenuElement] = []
+        for item in items {
+          let type = item["type"] as? String ?? "item"
           let iconName = item["icon"] as? String ?? ""
-          let enabled = item["enabled"] as? Bool ?? true
-          
-          let action = UIAction(
-            title: label,
-            image: !iconName.isEmpty ? UIImage(systemName: iconName) : nil,
-            state: .off
-          ) { [weak self] _ in
-            self?.channel.invokeMethod("popupMenuSelected", arguments: [
-              "location": location,
-              "actionIndex": actionIndex,
-              "menuIndex": menuIndex
-            ])
+          let image = !iconName.isEmpty ? UIImage(systemName: iconName) : nil
+
+          if type == "divider" {
+            flatIndex += 1  // occupies a slot to mirror the Dart flattening
+          } else if type == "submenu" {
+            let title = item["label"] as? String ?? ""
+            flatIndex += 1  // submenu parent occupies a slot
+            let children = item["children"] as? [[String: Any]] ?? []
+            let childElements = build(children)
+            elements.append(UIMenu(title: title, image: image, children: childElements))
+          } else {
+            let label = item["label"] as? String ?? ""
+            let enabled = item["enabled"] as? Bool ?? true
+            let myIndex = flatIndex
+            flatIndex += 1
+            let action = UIAction(title: label, image: image, state: .off) { [weak self] _ in
+              self?.channel.invokeMethod("popupMenuSelected", arguments: [
+                "location": location,
+                "actionIndex": actionIndex,
+                "menuIndex": myIndex
+              ])
+            }
+            action.attributes = enabled ? [] : [.disabled]
+            elements.append(action)
           }
-          
-          action.attributes = enabled ? [] : [.disabled]
-          menuActions.append(action)
         }
+        return elements
       }
-      
-      let menu = UIMenu(title: "", children: menuActions)
+
+      let menu = UIMenu(title: "", children: build(menuItems))
       button.menu = menu
       button.showsMenuAsPrimaryAction = true
     }
