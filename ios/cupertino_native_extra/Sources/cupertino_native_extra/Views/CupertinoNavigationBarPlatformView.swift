@@ -911,8 +911,22 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       // Dart side can map the reported `menuIndex` back to an action. A flat
       // menu (no submenus) keeps the same indices as before (backward compatible).
       var flatIndex = 0
-      func build(_ items: [[String: Any]]) -> [UIMenuElement] {
-        var elements: [UIMenuElement] = []
+      // At the top level, a divider ends the current inline section (a native
+      // `.displayInline` UIMenu), which draws a separator between groups so the
+      // menu reads as sections instead of one cramped list. Submenu children are
+      // built flat (`sectioned: false`). Row height itself is system-controlled.
+      func build(_ items: [[String: Any]], sectioned: Bool) -> [UIMenuElement] {
+        var out: [UIMenuElement] = []
+        var current: [UIMenuElement] = []
+        func flush() {
+          if sectioned && !current.isEmpty {
+            out.append(UIMenu(title: "", options: .displayInline, children: current))
+            current = []
+          }
+        }
+        func emit(_ el: UIMenuElement) {
+          if sectioned { current.append(el) } else { out.append(el) }
+        }
         for item in items {
           let type = item["type"] as? String ?? "item"
           let iconName = item["icon"] as? String ?? ""
@@ -920,12 +934,13 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
 
           if type == "divider" {
             flatIndex += 1  // occupies a slot to mirror the Dart flattening
+            flush()         // end the current section
           } else if type == "submenu" {
             let title = item["label"] as? String ?? ""
             flatIndex += 1  // submenu parent occupies a slot
             let children = item["children"] as? [[String: Any]] ?? []
-            let childElements = build(children)
-            elements.append(UIMenu(title: title, image: image, children: childElements))
+            let childElements = build(children, sectioned: false)
+            emit(UIMenu(title: title, image: image, children: childElements))
           } else {
             let label = item["label"] as? String ?? ""
             let enabled = item["enabled"] as? Bool ?? true
@@ -939,13 +954,14 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
               ])
             }
             action.attributes = enabled ? [] : [.disabled]
-            elements.append(action)
+            emit(action)
           }
         }
-        return elements
+        flush()
+        return out
       }
 
-      let menu = UIMenu(title: "", children: build(menuItems))
+      let menu = UIMenu(title: "", children: build(menuItems, sectioned: true))
       button.menu = menu
       button.showsMenuAsPrimaryAction = true
     }
