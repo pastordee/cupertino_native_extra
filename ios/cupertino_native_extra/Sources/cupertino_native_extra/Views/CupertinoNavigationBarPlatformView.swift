@@ -939,11 +939,18 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           // against the text. Widening the rect on the trailing edge is the
           // only lever -- neither UIMenu nor UIAction exposes a spacing
           // property. Applied here so submenu rows get it too.
-          let image = !iconName.isEmpty
-            ? UIImage(systemName: iconName)?.withAlignmentRectInsets(
-                UIEdgeInsets(top: 0, left: 0, bottom: 0, right: -Self.menuIconTitleGap)
-              )
-            : nil
+          var image: UIImage? = iconName.isEmpty ? nil : UIImage(systemName: iconName)
+          // Per-item point size. SF Symbols differ in width at the same size --
+          // a three-person glyph is much wider than a single one -- so an item
+          // can ask for a smaller size to sit level with its neighbours.
+          if let img = image, let s = item["iconSize"] as? NSNumber, s.doubleValue > 0 {
+            image = img.applyingSymbolConfiguration(
+              UIImage.SymbolConfiguration(pointSize: CGFloat(s.doubleValue))
+            )
+          }
+          image = image?.withAlignmentRectInsets(
+            UIEdgeInsets(top: 0, left: 0, bottom: 0, right: -Self.menuIconTitleGap)
+          )
 
           if type == "divider" {
             flatIndex += 1  // occupies a slot to mirror the Dart flattening

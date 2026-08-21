@@ -19,6 +19,9 @@ Map<String, dynamic>? _serializePopupEntry(CNPopupMenuEntry item) {
       'type': 'item',
       'label': item.label,
       'icon': item.icon?.name ?? '',
+      // Carried so a wide glyph can be brought back in line with its
+      // neighbours; without it every menu icon renders at the system size.
+      if (item.icon != null) 'iconSize': item.icon!.size,
       'enabled': item.enabled,
     };
   } else if (item is CNPopupMenuSubmenu) {
@@ -26,6 +29,7 @@ Map<String, dynamic>? _serializePopupEntry(CNPopupMenuEntry item) {
       'type': 'submenu',
       'label': item.title,
       'icon': item.icon?.name ?? '',
+      if (item.icon != null) 'iconSize': item.icon!.size,
       'children': item.children
           .map(_serializePopupEntry)
           .whereType<Map<String, dynamic>>()
