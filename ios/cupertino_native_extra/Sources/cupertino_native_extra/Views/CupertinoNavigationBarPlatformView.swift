@@ -3,6 +3,10 @@ import UIKit
 import ObjectiveC
 
 class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
+  /// Extra space between a menu item's icon and its label, in points.
+  /// See where it is applied for why this goes through the alignment rect.
+  private static let menuIconTitleGap: CGFloat = 6
+
   private let channel: FlutterMethodChannel
   private let container: UIView
   private let navigationBar: UINavigationBar
@@ -930,7 +934,16 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         for item in items {
           let type = item["type"] as? String ?? "item"
           let iconName = item["icon"] as? String ?? ""
-          let image = !iconName.isEmpty ? UIImage(systemName: iconName) : nil
+          // UIMenu derives the gap between an item's icon and its label from
+          // the image's alignment rect, and the system default sits tight
+          // against the text. Widening the rect on the trailing edge is the
+          // only lever -- neither UIMenu nor UIAction exposes a spacing
+          // property. Applied here so submenu rows get it too.
+          let image = !iconName.isEmpty
+            ? UIImage(systemName: iconName)?.withAlignmentRectInsets(
+                UIEdgeInsets(top: 0, left: 0, bottom: 0, right: -Self.menuIconTitleGap)
+              )
+            : nil
 
           if type == "divider" {
             flatIndex += 1  // occupies a slot to mirror the Dart flattening

@@ -2,6 +2,10 @@ import Flutter
 import UIKit
 
 class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
+  /// Extra space between a menu item's icon and its label, in points.
+  /// See where it is applied for why this is done through the alignment rect.
+  private static let menuIconTitleGap: CGFloat = 6
+
   private let channel: FlutterMethodChannel
   private let container: UIView
   private let button: UIButton
@@ -279,6 +283,15 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
           if let img = image, #available(iOS 13.0, *) {
             image = img.withTintColor(c, renderingMode: .alwaysOriginal)
           }
+        }
+        // UIMenu takes the gap between an item's image and its title from the
+        // image's alignment rect, and the system default sits tight against the
+        // label. Widening the rect on the trailing edge is the only lever --
+        // neither UIMenu nor UIAction exposes a spacing property.
+        if let img = image {
+          image = img.withAlignmentRectInsets(
+            UIEdgeInsets(top: 0, left: 0, bottom: 0, right: -Self.menuIconTitleGap)
+          )
         }
         let isEnabled = i < enabled.count ? enabled[i] : true
         let action = UIAction(title: title, image: image, attributes: isEnabled ? [] : [.disabled]) { [weak self] _ in
