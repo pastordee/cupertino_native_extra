@@ -2,6 +2,21 @@ import Flutter
 import UIKit
 import ObjectiveC
 
+/// A plain container that reports every layout pass.
+///
+/// The scrolling title view has to be clamped to the room actually left between
+/// the bar's leading and trailing buttons, and that is only knowable once those
+/// buttons have been laid out — so the clamp is applied here rather than at
+/// construction time.
+final class LayoutReportingView: UIView {
+  var onLayout: (() -> Void)?
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    onLayout?()
+  }
+}
+
 class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   /// Extra space between a menu item's icon and its label, in points.
   /// See where it is applied for why this goes through the alignment rect.
@@ -12,6 +27,19 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   private let navigationBar: UINavigationBar
   private let navigationItem: UINavigationItem
   private var currentTitle: String = ""
+  /// Width constraint on the scrolling segmented-control title, and the width
+  /// that control would take if nothing constrained it.
+  private var segmentedTitleWidthConstraint: NSLayoutConstraint?
+  private var segmentedTitleIntrinsicWidth: CGFloat = 0
+  private weak var segmentedTitleScrollView: UIScrollView?
+  private weak var segmentedTitleControl: UISegmentedControl?
+  private var segmentedControlWidthConstraint: NSLayoutConstraint?
+  /// Width the control needs for every segment to hold the longest label.
+  private var segmentedEqualWidth: CGFloat = 0
+  /// Each label's rendered width, in segment order. Segment positions are
+  /// derived from these rather than read off the control's subviews.
+  private var segmentedLabelWidths: [CGFloat] = []
+  private var didInitialSegmentScroll = false
   private var currentTint: UIColor? = nil
   private var isTransparent: Bool = false
   private var leadingPopupMenus: [Any?] = []
@@ -22,7 +50,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger, registrar: FlutterPluginRegistrar) {
     self.registrar = registrar
     self.channel = FlutterMethodChannel(name: "CupertinoNativeNavigationBar_\(viewId)", binaryMessenger: messenger)
-    self.container = UIView(frame: frame)
+    self.container = LayoutReportingView(frame: frame)
     self.navigationBar = UINavigationBar(frame: .zero)
     self.navigationItem = UINavigationItem()
 
@@ -456,6 +484,13 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       scrollView.showsVerticalScrollIndicator = false
       scrollView.bounces = true
       scrollView.translatesAutoresizingMaskIntoConstraints = false
+      // Keep the pill a pill. Where the control is wider than the room it has,
+      // the scroll view's edge is what you see — and a square cut hard against
+      // a bar button reads as a control running underneath it rather than one
+      // you can scroll. Rounding the clip to the control's own corner radius
+      // makes the boundary look like the end of a pill, which is what it is.
+      scrollView.layer.cornerRadius = CGFloat(segmentedControlHeight) / 2
+      scrollView.clipsToBounds = true
       
       // Create segmented control
       let segmentedControl = UISegmentedControl(items: segmentedControlLabels)
@@ -500,17 +535,75 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       // Add segmented control to scroll view
       scrollView.addSubview(segmentedControl)
       
-      // Calculate the intrinsic width of the segmented control
-      let segmentWidth = segmentedControl.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).width
+      // Measure the labels directly rather than asking the control.
+      //
+      // UISegmentedControl's fitting sizes are not dependable here:
+      // layoutFittingCompressedSize is the width it will squeeze DOWN to, not
+      // the width it wants, and intrinsicContentSize disagreed with both — which
+      // put the mode choice below on the wrong side of the comparison and left
+      // "Sermons" clipped in a pill with room to spare. The labels and the font
+      // are known, so measure them.
+      let measuringFont = UIFont.systemFont(
+        ofSize: segmentedControlLabelSize > 0 ? CGFloat(segmentedControlLabelSize) : 13
+      )
+      // Room either side of each label, covering the control's own insets.
+      let perSegmentPadding: CGFloat = 26
+      var totalLabels: CGFloat = 0
+      segmentedLabelWidths = []
+      for label in segmentedControlLabels {
+        let width = (label as NSString).size(withAttributes: [.font: measuringFont]).width
+        segmentedLabelWidths.append(width)
+        totalLabels += width
+      }
+      let count = CGFloat(max(1, segmentedControlLabels.count))
+      segmentedEqualWidth = totalLabels + perSegmentPadding * count
+
+      // Each segment takes the width its own label needs, and the control is
+      // left at that width. Stretching a control in this mode is what broke the
+      // layout: given more width than its content needs it hands almost all of
+      // the surplus to the first segment and pushes the rest out of view.
+      segmentedControl.apportionsSegmentWidthsByContent = true
+      // Refuse to be squeezed. Without this the control gives up its intrinsic
+      // width to fit the scroll view's frame and truncates the last label
+      // ("All Prayer") — and having shrunk to fit, there is no overflow left to
+      // scroll. Holding its full width makes the overflow real, so the selected
+      // segment can be scrolled into view instead.
+      segmentedControl.setContentCompressionResistancePriority(.required, for: .horizontal)
+      let segmentWidth = segmentedEqualWidth
       
-      // Constraints for segmented control within scroll view
+      // Pin the control to the scroll view's CONTENT guide, not its frame.
+      //
+      // These anchors used to go to scrollView.leading/trailing/top/bottom,
+      // which are the frame's edges. Pinning all four of those and then fixing
+      // the width forced the scroll view's FRAME to be segmentWidth wide, so it
+      // could never scroll — and it dragged the title view out past the space
+      // between the bar's buttons, where the navigation bar clipped it. That is
+      // why a four-segment control came out sliced flat down its right edge.
+      //
+      // Against the content guide the width describes what there is to scroll,
+      // and the frame is free to be narrower than it.
+      let contentGuide = scrollView.contentLayoutGuide
+      let frameGuide = scrollView.frameLayoutGuide
+      // Pin the control to the width IT says it needs.
+      //
+      // Measuring the labels ourselves made it slightly too narrow and
+      // UISegmentedControl truncated the last one ("All Pr…"); leaving it
+      // unconstrained was no better, because something in the scroll view's
+      // constraint chain still compressed it and it shaved the final character.
+      // intrinsicContentSize is the control's own answer, taken after its
+      // titles and font are set, so it is by definition enough to draw every
+      // label — and pinning to it makes the overflow real for the scroll view.
+      let naturalWidth = segmentedControl.intrinsicContentSize.width
+      segmentedControl.widthAnchor.constraint(equalToConstant: naturalWidth).isActive = true
       NSLayoutConstraint.activate([
-        segmentedControl.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-        segmentedControl.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-        segmentedControl.topAnchor.constraint(equalTo: scrollView.topAnchor),
-        segmentedControl.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+        segmentedControl.leadingAnchor.constraint(equalTo: contentGuide.leadingAnchor),
+        segmentedControl.trailingAnchor.constraint(equalTo: contentGuide.trailingAnchor),
+        segmentedControl.topAnchor.constraint(equalTo: contentGuide.topAnchor),
+        segmentedControl.bottomAnchor.constraint(equalTo: contentGuide.bottomAnchor),
         segmentedControl.heightAnchor.constraint(equalToConstant: CGFloat(segmentedControlHeight)),
-        segmentedControl.widthAnchor.constraint(equalToConstant: segmentWidth)
+        // Only the height is shared with the frame; the width is free to differ,
+        // which is exactly what makes horizontal scrolling possible.
+        frameGuide.heightAnchor.constraint(equalTo: contentGuide.heightAnchor)
       ])
       
       // Create a container view to hold scroll view and fade overlay
@@ -526,6 +619,27 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
         scrollView.heightAnchor.constraint(equalToConstant: CGFloat(segmentedControlHeight))
       ])
+
+      // Clamp the title view to the room actually left between the bar's
+      // buttons, so it can never be drawn underneath them.
+      //
+      // Left to itself the title view takes whatever width its content wants
+      // and the navigation bar lets it run under the trailing buttons, clipping
+      // it — a four-segment control came out sliced flat down its right edge
+      // with its last segment hidden. The width is set for real (not as a
+      // preference) and recomputed on every layout pass by
+      // updateSegmentedTitleWidth(), because how much room is left only becomes
+      // known once the leading and trailing buttons have been laid out.
+      containerView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+      containerView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+      scrollView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+      let titleWidth = containerView.widthAnchor.constraint(equalToConstant: segmentWidth)
+      titleWidth.isActive = true
+      segmentedTitleWidthConstraint = titleWidth
+      segmentedTitleIntrinsicWidth = segmentWidth
+      segmentedTitleScrollView = scrollView
+      segmentedTitleControl = segmentedControl
       
       // Note: Gradient fade overlay temporarily removed for debugging
       // Will add back once scrolling behavior is perfected
@@ -698,6 +812,17 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     }
 
     navigationBar.items = [navigationItem]
+    (container as? LayoutReportingView)?.onLayout = { [weak self] in
+      guard let self = self else { return }
+      // Lay the bar out first. This callback fires on the platform view's own
+      // layout pass, which happens BEFORE the navigation bar positions its
+      // title view and buttons — so without this everything measured below
+      // reads zero: the buttons take no width, the scroll view has no bounds
+      // and no contentSize, and the clamp "fits" the title into nearly the
+      // whole bar while the scroll logic can never see anything to scroll.
+      self.navigationBar.layoutIfNeeded()
+      self.updateSegmentedTitleWidth()
+    }
     container.addSubview(navigationBar)
 
     NSLayoutConstraint.activate([
@@ -793,6 +918,120 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+
+  /// Narrows the scrolling segmented-control title to the space left between
+  /// the leading and trailing buttons, so it never renders beneath them.
+  ///
+  /// Anything wider than that space stays as scrollable content: the control
+  /// keeps its full width inside the scroll view, and the part that does not
+  /// fit is reached by swiping rather than by overlapping the buttons.
+  private func updateSegmentedTitleWidth() {
+    guard let widthConstraint = segmentedTitleWidthConstraint else { return }
+
+    let barWidth = navigationBar.bounds.width
+    guard barWidth > 0 else { return }
+
+    // The bar button items are custom views we built, so their laid-out widths
+    // are the honest measure of how much of the bar they have taken.
+    let leading = (navigationItem.leftBarButtonItems ?? [])
+      .reduce(CGFloat(0)) { $0 + ($1.customView?.bounds.width ?? 0) }
+    let trailing = (navigationItem.rightBarButtonItems ?? [])
+      .reduce(CGFloat(0)) { $0 + ($1.customView?.bounds.width ?? 0) }
+
+    // Breathing room so the control stops short of the buttons rather than
+    // touching them.
+    let gutter: CGFloat = 24
+    let available = max(0, barWidth - leading - trailing - gutter)
+    guard available > 0 else { return }
+
+    // The pill takes the whole space between the buttons. Hugging its content
+    // instead left it looking undersized, and left no slack for a longer label
+    // or another segment — the first one that did not fit would start
+    // scrolling straight away.
+    if abs(widthConstraint.constant - available) > 0.5 {
+      widthConstraint.constant = available
+    }
+
+    // The pink track is the control's own background, so widening the scroll
+    // view alone would leave a narrow pill sitting inside a wider clip. The
+    // control has to be stretched too — but only in the mode that survives it.
+    //
+    // With equal-width segments the control divides whatever width it is given
+    // evenly, so it can be stretched to fill the space. With segments sized by
+    // content it cannot: given more width than its content needs, it hands
+    // almost all of the surplus to the first segment and pushes the rest out of
+    // view — which is what made "Sermons" disappear.
+    //
+    // So: while the labels fit evenly, fill the space. Once they no longer do,
+    // switch to content-sized segments at their natural width, where every
+    // label is drawn in full and the overflow scrolls.
+    // The control keeps its natural width. It is never stretched to fill the
+    // bar: content-sized segments misdistribute any surplus width, and
+    // equal-width segments would have to be as wide as the longest label in
+    // every segment, which starts scrolling far sooner. Where the content is
+    // narrower than the bar, the pill simply sits centred with air either side.
+
+    // Bring the starting selection into view once the scroll view has a size.
+    // The tap handler already centres the selection when someone picks a
+    // segment, but a tab change rebuilds this whole view from Flutter with the
+    // selection preset — no tap happens, so without this the selected segment
+    // can start life outside the viewport, which is precisely the one you want
+    // to see.
+    // Wait for the layout pass where the content is genuinely wider than the
+    // frame. Marking this done as soon as contentSize was merely non-zero fired
+    // it on an early pass — before the width clamp had narrowed the frame — so
+    // there was nothing to scroll yet, and the one attempt was spent.
+    if !didInitialSegmentScroll,
+       let scrollView = segmentedTitleScrollView,
+       scrollView.bounds.width > 0,
+       scrollView.contentSize.width > scrollView.bounds.width {
+      didInitialSegmentScroll = true
+      centerSelectedSegment(animated: false)
+    }
+  }
+
+  /// Scrolls the selected segment into view, centring it where there is room.
+  private func centerSelectedSegment(animated: Bool) {
+    guard let scrollView = segmentedTitleScrollView,
+          let control = segmentedTitleControl else { return }
+
+    let count = control.numberOfSegments
+    let index = control.selectedSegmentIndex
+    guard count > 0, index >= 0 else { return }
+
+    let scrollWidth = scrollView.bounds.width
+    let contentWidth = scrollView.contentSize.width
+    // Nothing to do when everything already fits.
+    guard scrollWidth > 0, contentWidth > scrollWidth else { return }
+
+    // Work out where the segment sits from the label widths, not from the
+    // control's subviews.
+    //
+    // Sorting subviews by x and indexing by selectedIndex looked reasonable but
+    // is not: the subviews include the selected-segment indicator, which sits at
+    // exactly the same x as the selected segment. With that tie the order is
+    // undefined and shifts with the selection, so the offset came out right for
+    // some tabs and wrong for others — the first and last ones ended up
+    // half-hidden, which is the opposite of the point.
+    //
+    // Segments are content-apportioned, so each takes a share of the content
+    // width proportional to its label.
+    let segmentX: CGFloat
+    let segmentWidth: CGFloat
+    let totalLabels = segmentedLabelWidths.reduce(0, +)
+    if index < segmentedLabelWidths.count, totalLabels > 0 {
+      let before = segmentedLabelWidths.prefix(index).reduce(0, +)
+      segmentX = contentWidth * (before / totalLabels)
+      segmentWidth = contentWidth * (segmentedLabelWidths[index] / totalLabels)
+    } else {
+      segmentWidth = contentWidth / CGFloat(count)
+      segmentX = CGFloat(index) * segmentWidth
+    }
+
+    let centred = (segmentX + segmentWidth / 2) - scrollWidth / 2
+    let clamped = min(max(0, centred), contentWidth - scrollWidth)
+    scrollView.setContentOffset(CGPoint(x: clamped, y: 0), animated: animated)
   }
 
   func view() -> UIView { container }
@@ -949,57 +1188,10 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   }
   
   @objc private func segmentedControlValueChanged(_ sender: UISegmentedControl) {
-    // Center the selected segment in the scroll view
-    if let scrollView = sender.superview as? UIScrollView {
-      let selectedIndex = sender.selectedSegmentIndex
-      let segmentCount = sender.numberOfSegments
-      
-      guard segmentCount > 0 else {
-        channel.invokeMethod("segmentedControlChanged", arguments: ["selectedIndex": sender.selectedSegmentIndex])
-        return
-      }
-      
-      // Get the actual segment frames from subviews
-      let subviews = sender.subviews.sorted { $0.frame.minX < $1.frame.minX }
-      
-      // Get scroll view dimensions
-      let scrollViewWidth = scrollView.bounds.width
-      let contentWidth = scrollView.contentSize.width
-      let currentOffset = scrollView.contentOffset.x
-      
-      // Calculate selected segment position
-      var selectedSegmentX: CGFloat = 0
-      var selectedSegmentWidth: CGFloat = 0
-      
-      if selectedIndex < subviews.count {
-        let segmentView = subviews[selectedIndex]
-        selectedSegmentX = segmentView.frame.minX
-        selectedSegmentWidth = segmentView.frame.width
-      } else {
-        // Fallback
-        let totalWidth = sender.bounds.width
-        selectedSegmentWidth = totalWidth / CGFloat(segmentCount)
-        selectedSegmentX = CGFloat(selectedIndex) * selectedSegmentWidth
-      }
-      
-      // Calculate the center of the selected segment
-      let segmentCenter = selectedSegmentX + (selectedSegmentWidth / 2)
-      
-      // Calculate target offset to center the segment in the scroll view
-      var targetOffsetX = segmentCenter - (scrollViewWidth / 2)
-      
-      // Clamp to valid scroll range
-      let maxOffset = max(0, contentWidth - scrollViewWidth)
-      targetOffsetX = max(0, min(targetOffsetX, maxOffset))
-      
-      // Animate to center the segment
-      if abs(targetOffsetX - currentOffset) > 1.0 {
-        UIView.animate(withDuration: 0.25, delay: 0, options: [.curveEaseOut], animations: {
-          scrollView.contentOffset = CGPoint(x: targetOffsetX, y: 0)
-        })
-      }
-    }
-    
+    // One implementation for both paths: a tap here, and a selection that
+    // arrives preset when Flutter rebuilds the bar.
+    centerSelectedSegment(animated: true)
+
     // Notify Flutter about the selection change
     channel.invokeMethod("segmentedControlChanged", arguments: ["selectedIndex": sender.selectedSegmentIndex])
   }
