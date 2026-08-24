@@ -530,6 +530,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
   double? _intrinsicHeight;
   bool? _lastIsDark;
   String? _lastTitle;
+  String? _lastBadgeSignature;
   int? _lastTint;
   bool? _lastTransparent;
 
@@ -864,6 +865,42 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
     return null;
   }
 
+  List<String> _badgeValuesOf(List<CNNavigationBarAction>? actions) =>
+      actions?.map((e) => e.badgeValue ?? '').toList() ?? const <String>[];
+
+  List<int> _badgeColorsOf(List<CNNavigationBarAction>? actions) =>
+      actions
+          ?.map((e) => resolveColorToArgb(e.badgeColor, context) ?? 0)
+          .toList() ??
+      const <int>[];
+
+  /// Pushes badge changes to the native bar.
+  ///
+  /// Badges are part of the platform view's creation params, so without this a
+  /// badge that appears or changes after the first frame — an unread count
+  /// arriving from the network, say — never reaches the screen.
+  Future<void> _syncBadgesIfNeeded() async {
+    final ch = _channel;
+    if (ch == null) return;
+
+    final leadingValues = _badgeValuesOf(widget.leading);
+    final leadingColors = _badgeColorsOf(widget.leading);
+    final trailingValues = _badgeValuesOf(widget.trailing);
+    final trailingColors = _badgeColorsOf(widget.trailing);
+    final signature =
+        '${leadingValues.join('\u0000')}|${leadingColors.join(',')}'
+        '|${trailingValues.join('\u0000')}|${trailingColors.join(',')}';
+    if (_lastBadgeSignature == signature) return;
+    _lastBadgeSignature = signature;
+
+    await ch.invokeMethod('setBadges', <String, dynamic>{
+      'leadingBadgeValues': leadingValues,
+      'leadingBadgeColors': leadingColors,
+      'trailingBadgeValues': trailingValues,
+      'trailingBadgeColors': trailingColors,
+    });
+  }
+
   Future<void> _syncPropsToNativeIfNeeded() async {
     final ch = _channel;
     if (ch == null) return;
@@ -889,6 +926,8 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
     if (style.isNotEmpty) {
       await ch.invokeMethod('setStyle', style);
     }
+
+    await _syncBadgesIfNeeded();
   }
 
   Future<void> _syncBrightnessIfNeeded() async {

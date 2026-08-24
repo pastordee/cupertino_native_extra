@@ -760,6 +760,18 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         } else {
           result(FlutterError(code: "bad_args", message: "Missing style", details: nil))
         }
+      case "setBadges":
+        if let args = call.arguments as? [String: Any] {
+          self.updateBadges(
+            leadingValues: (args["leadingBadgeValues"] as? [String]) ?? [],
+            leadingColors: (args["leadingBadgeColors"] as? [Int]) ?? [],
+            trailingValues: (args["trailingBadgeValues"] as? [String]) ?? [],
+            trailingColors: (args["trailingBadgeColors"] as? [Int]) ?? []
+          )
+          result(nil)
+        } else {
+          result(FlutterError(code: "bad_args", message: "Missing badges", details: nil))
+        }
       case "setBrightness":
         if let args = call.arguments as? [String: Any], let isDark = (args["isDark"] as? NSNumber)?.boolValue {
           if #available(iOS 13.0, *) {
@@ -799,6 +811,107 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   }
   
   // Helper function to find all UIButtons in a view hierarchy
+  private static let badgeViewTag = 987654
+
+  /// Adds, updates or removes a button's badge.
+  ///
+  /// The badge is drawn into an image rather than built from a UILabel. The
+  /// navigation bar re-renders bar-button content as a template, which drops a
+  /// label's backgroundColor and paints the whole pill flat in its textColor —
+  /// that is why the badge used to come out solid white whatever colour was
+  /// asked for. An .alwaysOriginal image keeps the colours it was drawn with.
+  private func applyBadge(to button: UIButton, value: String, argb: Int) {
+    button.viewWithTag(Self.badgeViewTag)?.removeFromSuperview()
+    guard !value.isEmpty else { return }
+
+    let badgeColor: UIColor = argb != 0 ? UIColor(argb: argb) : .systemRed
+    let badgeFont = UIFont.systemFont(ofSize: 11, weight: .semibold)
+    let minWidth: CGFloat = 18
+    let badgeHeight: CGFloat = 18
+    let textWidth = (value as NSString).size(withAttributes: [.font: badgeFont]).width
+    let badgeWidth = max(minWidth, textWidth + 10)
+    let badgeSize = CGSize(width: badgeWidth, height: badgeHeight)
+
+    let badgeImage = UIGraphicsImageRenderer(size: badgeSize).image { _ in
+      badgeColor.setFill()
+      UIBezierPath(
+        roundedRect: CGRect(origin: .zero, size: badgeSize),
+        cornerRadius: badgeHeight / 2
+      ).fill()
+
+      let paragraph = NSMutableParagraphStyle()
+      paragraph.alignment = .center
+      let attributes: [NSAttributedString.Key: Any] = [
+        .font: badgeFont,
+        .foregroundColor: UIColor.white,
+        .paragraphStyle: paragraph,
+      ]
+      let textHeight = (value as NSString).size(withAttributes: attributes).height
+      (value as NSString).draw(
+        in: CGRect(
+          x: 0,
+          y: (badgeHeight - textHeight) / 2,
+          width: badgeWidth,
+          height: textHeight
+        ),
+        withAttributes: attributes
+      )
+    }.withRenderingMode(.alwaysOriginal)
+
+    let badgeView = UIImageView(image: badgeImage)
+    badgeView.tag = Self.badgeViewTag
+    badgeView.translatesAutoresizingMaskIntoConstraints = false
+    button.addSubview(badgeView)
+
+    NSLayoutConstraint.activate([
+      badgeView.widthAnchor.constraint(equalToConstant: badgeWidth),
+      badgeView.heightAnchor.constraint(equalToConstant: badgeHeight),
+      badgeView.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -4),
+      badgeView.topAnchor.constraint(equalTo: button.topAnchor, constant: 2),
+    ])
+  }
+
+  /// Re-applies badges to bar buttons that already exist. The bar items are
+  /// built once from the platform view's creation params, so a badge that
+  /// appears or changes after the first frame — an unread count arriving from
+  /// the network, say — would otherwise never reach the screen.
+  ///
+  /// Buttons carry their action index in `tag`, offset by section: leading from
+  /// 0, middle from 1000, trailing from 2000. Indices outside the supplied
+  /// arrays belong to another section and are skipped.
+  private func updateBadges(
+    leadingValues: [String],
+    leadingColors: [Int],
+    trailingValues: [String],
+    trailingColors: [Int]
+  ) {
+    func apply(
+      _ items: [UIBarButtonItem]?,
+      tagOffset: Int,
+      values: [String],
+      colors: [Int]
+    ) {
+      guard let items = items else { return }
+      for item in items {
+        guard let customView = item.customView else { continue }
+        for button in findAllButtons(in: customView) {
+          let index = button.tag - tagOffset
+          guard index >= 0, index < values.count else { continue }
+          applyBadge(
+            to: button,
+            value: values[index],
+            argb: index < colors.count ? colors[index] : 0
+          )
+        }
+      }
+    }
+
+    apply(navigationItem.leftBarButtonItems, tagOffset: 0,
+          values: leadingValues, colors: leadingColors)
+    apply(navigationItem.rightBarButtonItems, tagOffset: 2000,
+          values: trailingValues, colors: trailingColors)
+  }
+
   private func findAllButtons(in view: UIView) -> [UIButton] {
     var buttons: [UIButton] = []
     if let button = view as? UIButton {
@@ -1104,42 +1217,11 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       }
       
       // Apply badge if available
-      if i < badgeValues.count && !badgeValues[i].isEmpty {
-        let badgeValue = badgeValues[i]
-        let badgeColor: UIColor
-        if i < badgeColors.count && badgeColors[i] != 0 {
-          badgeColor = UIColor(argb: badgeColors[i])
-        } else {
-          badgeColor = .systemRed  // Default red badge
-        }
-        
-        // Create badge label
-        let badgeLabel = UILabel()
-        badgeLabel.text = badgeValue
-        badgeLabel.textColor = .white
-        badgeLabel.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
-        badgeLabel.backgroundColor = badgeColor
-        badgeLabel.textAlignment = .center
-        badgeLabel.layer.cornerRadius = 9
-        badgeLabel.layer.masksToBounds = true
-        badgeLabel.translatesAutoresizingMaskIntoConstraints = false
-        
-        // Calculate badge width based on text
-        let minWidth: CGFloat = 18
-        let textWidth = (badgeValue as NSString).size(withAttributes: [.font: badgeLabel.font!]).width
-        let badgeWidth = max(minWidth, textWidth + 10)
-        
-        button.addSubview(badgeLabel)
-        
-        // Position badge at top-right corner
-        NSLayoutConstraint.activate([
-          badgeLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: minWidth),
-          badgeLabel.widthAnchor.constraint(equalToConstant: badgeWidth),
-          badgeLabel.heightAnchor.constraint(equalToConstant: 18),
-          badgeLabel.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -4),
-          badgeLabel.topAnchor.constraint(equalTo: button.topAnchor, constant: 2)
-        ])
-      }
+      applyBadge(
+        to: button,
+        value: i < badgeValues.count ? badgeValues[i] : "",
+        argb: i < badgeColors.count ? badgeColors[i] : 0
+      )
       
       // Ensure button has no background - only the pill blur view should show
       button.backgroundColor = .clear
