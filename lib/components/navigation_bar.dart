@@ -531,6 +531,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
   bool? _lastIsDark;
   String? _lastTitle;
   String? _lastBadgeSignature;
+  String? _lastSegmentSignature;
   int? _lastTint;
   bool? _lastTransparent;
 
@@ -901,6 +902,31 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
     });
   }
 
+  /// Pushes segmented-control label changes to the native bar.
+  ///
+  /// Like badges, the segment titles are part of the platform view's creation
+  /// params, so a set of labels that changes after the first frame never
+  /// reaches the screen — the bar keeps whatever it was built with while the
+  /// content below it updates. The selected index rides along, because the two
+  /// have to move together.
+  Future<void> _syncSegmentsIfNeeded() async {
+    final ch = _channel;
+    if (ch == null) return;
+
+    final labels = widget.segmentedControlLabels;
+    if (labels == null || labels.isEmpty) return;
+
+    final selected = widget.segmentedControlSelectedIndex ?? 0;
+    final signature = '${labels.join('\u0000')}|$selected';
+    if (_lastSegmentSignature == signature) return;
+    _lastSegmentSignature = signature;
+
+    await ch.invokeMethod('setSegments', <String, dynamic>{
+      'labels': labels,
+      'selectedIndex': selected,
+    });
+  }
+
   Future<void> _syncPropsToNativeIfNeeded() async {
     final ch = _channel;
     if (ch == null) return;
@@ -928,6 +954,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
     }
 
     await _syncBadgesIfNeeded();
+    await _syncSegmentsIfNeeded();
   }
 
   Future<void> _syncBrightnessIfNeeded() async {

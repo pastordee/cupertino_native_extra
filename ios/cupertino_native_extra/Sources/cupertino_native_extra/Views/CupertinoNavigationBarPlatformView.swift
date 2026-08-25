@@ -39,6 +39,9 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   /// Each label's rendered width, in segment order. Segment positions are
   /// derived from these rather than read off the control's subviews.
   private var segmentedLabelWidths: [CGFloat] = []
+  /// Font the segment labels are measured with, kept so a replacement set of
+  /// labels can be measured exactly as the original set was.
+  private var segmentedMeasuringFont: UIFont = .systemFont(ofSize: 13)
   private var didInitialSegmentScroll = false
   private var currentTint: UIColor? = nil
   private var isTransparent: Bool = false
@@ -546,6 +549,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       let measuringFont = UIFont.systemFont(
         ofSize: segmentedControlLabelSize > 0 ? CGFloat(segmentedControlLabelSize) : 13
       )
+      segmentedMeasuringFont = measuringFont
       // Room either side of each label, covering the control's own insets.
       let perSegmentPadding: CGFloat = 26
       var totalLabels: CGFloat = 0
@@ -594,7 +598,12 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       // titles and font are set, so it is by definition enough to draw every
       // label — and pinning to it makes the overflow real for the scroll view.
       let naturalWidth = segmentedControl.intrinsicContentSize.width
-      segmentedControl.widthAnchor.constraint(equalToConstant: naturalWidth).isActive = true
+      let naturalWidthConstraint =
+        segmentedControl.widthAnchor.constraint(equalToConstant: naturalWidth)
+      naturalWidthConstraint.isActive = true
+      // Kept so a later change of labels can repin it — otherwise the control
+      // holds the width it needed for the labels it was born with.
+      segmentedControlWidthConstraint = naturalWidthConstraint
       NSLayoutConstraint.activate([
         segmentedControl.leadingAnchor.constraint(equalTo: contentGuide.leadingAnchor),
         segmentedControl.trailingAnchor.constraint(equalTo: contentGuide.trailingAnchor),
@@ -885,6 +894,17 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         } else {
           result(FlutterError(code: "bad_args", message: "Missing style", details: nil))
         }
+      case "setSegments":
+        if let args = call.arguments as? [String: Any],
+           let labels = args["labels"] as? [String] {
+          self.updateSegments(
+            labels: labels,
+            selectedIndex: (args["selectedIndex"] as? NSNumber)?.intValue ?? 0
+          )
+          result(nil)
+        } else {
+          result(FlutterError(code: "bad_args", message: "Missing labels", details: nil))
+        }
       case "setBadges":
         if let args = call.arguments as? [String: Any] {
           self.updateBadges(
@@ -989,6 +1009,49 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       didInitialSegmentScroll = true
       centerSelectedSegment(animated: false)
     }
+  }
+
+  /// Replaces the segmented control's titles in place.
+  ///
+  /// The titles arrive with the platform view's creation params, so a set of
+  /// labels that changes later — the Warriors tabs after you edit which
+  /// warriors you follow — never reached the bar: the tabs below updated while
+  /// the control above kept its original titles until the whole screen was
+  /// rebuilt. Everything derived from the labels is recomputed here, because
+  /// the widths and the scroll geometry are only as good as the labels they
+  /// were measured from.
+  private func updateSegments(labels: [String], selectedIndex: Int) {
+    guard let control = segmentedTitleControl, !labels.isEmpty else { return }
+
+    control.removeAllSegments()
+    for (index, label) in labels.enumerated() {
+      control.insertSegment(withTitle: label, at: index, animated: false)
+    }
+    control.selectedSegmentIndex = max(0, min(selectedIndex, labels.count - 1))
+
+    var longestLabel: CGFloat = 0
+    var totalLabels: CGFloat = 0
+    segmentedLabelWidths = []
+    for label in labels {
+      let width = (label as NSString)
+        .size(withAttributes: [.font: segmentedMeasuringFont]).width
+      segmentedLabelWidths.append(width)
+      longestLabel = max(longestLabel, width)
+      totalLabels += width
+    }
+    let perSegmentPadding: CGFloat = 26
+    let count = CGFloat(labels.count)
+    segmentedEqualWidth = totalLabels + perSegmentPadding * count
+
+    // A different number of segments means a different natural width, so let
+    // the starting selection be scrolled into view again.
+    didInitialSegmentScroll = false
+    control.invalidateIntrinsicContentSize()
+    // Repin to the width the NEW labels need. Left alone this still holds the
+    // width the original labels needed, so a shorter set would sit in an
+    // oversized control and a longer one would be truncated.
+    segmentedControlWidthConstraint?.constant = control.intrinsicContentSize.width
+    container.setNeedsLayout()
   }
 
   /// Scrolls the selected segment into view, centring it where there is room.
