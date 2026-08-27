@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'search_bar.dart';
 import 'toolbar.dart';
 import 'navigation_bar.dart';

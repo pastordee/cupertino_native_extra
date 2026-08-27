@@ -6,12 +6,16 @@ issue_tracker: https://github.com/pastordee/cupertino_native_extra/issues
 homepage: https://github.com/pastordee/cupertino_native_extra
 
 environment:
-  sdk: ^3.9.0
-  flutter: '>=3.3.0'
+  sdk: ^3.12.0
+  flutter: '>=3.44.0'
 
 dependencies:
   flutter:
     sdk: flutter
+  # The design widgets now live outside the SDK; see
+  # package:cupertino_ui / package:material_ui.
+  cupertino_ui: ^1.0.1
+  material_ui: ^1.1.0
   plugin_platform_interface: ^2.0.2
 
 dev_dependencies:

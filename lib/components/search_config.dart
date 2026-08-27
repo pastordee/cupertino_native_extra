@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import '../style/sf_symbol.dart';
 
 /// Callback for search text changes with search results.

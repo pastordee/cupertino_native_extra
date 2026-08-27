@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 
 /// Converts a [Color] to ARGB int (0xAARRGGBB) format for native communication.
 ///
