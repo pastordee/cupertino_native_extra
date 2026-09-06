@@ -16,7 +16,13 @@ abstract class CNPopupMenuEntry {
 /// A selectable item in a popup menu.
 class CNPopupMenuItem extends CNPopupMenuEntry {
   /// Creates a selectable popup menu item.
-  const CNPopupMenuItem({required this.label, this.icon, this.enabled = true});
+  const CNPopupMenuItem({
+    required this.label,
+    this.icon,
+    this.enabled = true,
+    this.selected = false,
+    this.subtitle,
+  });
 
   /// Display label for the item.
   final String label;
@@ -26,6 +32,18 @@ class CNPopupMenuItem extends CNPopupMenuEntry {
 
   /// Whether the item can be selected.
   final bool enabled;
+
+  /// Whether this item is the one currently in effect.
+  ///
+  /// Renders as a native checkmark (`UIAction.State.on`), which is how iOS
+  /// shows the standing choice in a menu of alternatives.
+  final bool selected;
+
+  /// A second, quieter line under [label], describing what the item does.
+  ///
+  /// Maps to `UIAction.subtitle`, available since iOS 15. Ignored on older
+  /// systems and on Material, where the row has no place to put it.
+  final String? subtitle;
 }
 
 /// A visual divider between popup menu items.

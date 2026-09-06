@@ -23,6 +23,8 @@ Map<String, dynamic>? _serializePopupEntry(CNPopupMenuEntry item) {
       // neighbours; without it every menu icon renders at the system size.
       if (item.icon != null) 'iconSize': item.icon!.size,
       'enabled': item.enabled,
+      'selected': item.selected,
+      if (item.subtitle != null) 'subtitle': item.subtitle,
     };
   } else if (item is CNPopupMenuSubmenu) {
     return {
