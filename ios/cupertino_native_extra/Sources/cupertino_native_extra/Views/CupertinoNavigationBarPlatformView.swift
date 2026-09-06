@@ -604,12 +604,24 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       // Kept so a later change of labels can repin it — otherwise the control
       // holds the width it needed for the labels it was born with.
       segmentedControlWidthConstraint = naturalWidthConstraint
+      let segmentedHeight =
+        segmentedControl.heightAnchor.constraint(equalToConstant: CGFloat(segmentedControlHeight))
+      // Priority 999, not required. UIKit sizes a navigation bar's title and
+      // button areas on a first pass with placeholder geometry — you can see it
+      // as '_UITemporaryLayoutHeight' in the unsatisfiable-constraint logs —
+      // before the real space is known. A required constraint of ours in that
+      // pass is a flat contradiction with UIKit's own required one, so it logs
+      // and gets broken; at 999 it simply yields for that pass and applies
+      // normally once the true geometry arrives. Still above every content
+      // hugging and compression priority, so nothing about the settled layout
+      // changes.
+      segmentedHeight.priority = .required - 1
       NSLayoutConstraint.activate([
         segmentedControl.leadingAnchor.constraint(equalTo: contentGuide.leadingAnchor),
         segmentedControl.trailingAnchor.constraint(equalTo: contentGuide.trailingAnchor),
         segmentedControl.topAnchor.constraint(equalTo: contentGuide.topAnchor),
         segmentedControl.bottomAnchor.constraint(equalTo: contentGuide.bottomAnchor),
-        segmentedControl.heightAnchor.constraint(equalToConstant: CGFloat(segmentedControlHeight)),
+        segmentedHeight,
         // Only the height is shared with the frame; the width is free to differ,
         // which is exactly what makes horizontal scrolling possible.
         frameGuide.heightAnchor.constraint(equalTo: contentGuide.heightAnchor)
@@ -621,12 +633,16 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       containerView.addSubview(scrollView)
       
       // Scroll view fills the container
+      let scrollHeight =
+        scrollView.heightAnchor.constraint(equalToConstant: CGFloat(segmentedControlHeight))
+      // Same first-pass reason as segmentedHeight above.
+      scrollHeight.priority = .required - 1
       NSLayoutConstraint.activate([
         scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
         scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
         scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
         scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-        scrollView.heightAnchor.constraint(equalToConstant: CGFloat(segmentedControlHeight))
+        scrollHeight
       ])
 
       // Clamp the title view to the room actually left between the bar's
@@ -644,6 +660,14 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       scrollView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
       let titleWidth = containerView.widthAnchor.constraint(equalToConstant: segmentWidth)
+      // 999 rather than required. The width above is a best guess until the
+      // leading and trailing buttons have been laid out, and on the first pass
+      // it is routinely wider than the room the bar actually has — a required
+      // constraint there contradicts UIKit's own and logs. It still outranks
+      // hugging and compression, so the clamp this exists for is intact, and
+      // updateSegmentedTitleWidth() corrects the constant once the real space
+      // is known.
+      titleWidth.priority = .required - 1
       titleWidth.isActive = true
       segmentedTitleWidthConstraint = titleWidth
       segmentedTitleIntrinsicWidth = segmentWidth
@@ -1332,14 +1356,38 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
           } else {
             let label = item["label"] as? String ?? ""
             let enabled = item["enabled"] as? Bool ?? true
+            // The standing choice in a menu of alternatives carries a
+            // checkmark, the way iOS marks one everywhere else.
+            let selected = item["selected"] as? Bool ?? false
             let myIndex = flatIndex
             flatIndex += 1
-            let action = UIAction(title: label, image: image, state: .off) { [weak self] _ in
+            // A second line describing what the row does. UIAction.subtitle
+            // is iOS 15+ and this package still supports 14, so the guard is
+            // load-bearing — same shape the pull-down button uses.
+            let subtitle = item["subtitle"] as? String
+            let handler: (UIAction) -> Void = { [weak self] _ in
               self?.channel.invokeMethod("popupMenuSelected", arguments: [
                 "location": location,
                 "actionIndex": actionIndex,
                 "menuIndex": myIndex
               ])
+            }
+            let action: UIAction
+            if #available(iOS 15.0, *), let subtitle, !subtitle.isEmpty {
+              action = UIAction(
+                title: label,
+                subtitle: subtitle,
+                image: image,
+                state: selected ? .on : .off,
+                handler: handler
+              )
+            } else {
+              action = UIAction(
+                title: label,
+                image: image,
+                state: selected ? .on : .off,
+                handler: handler
+              )
             }
             action.attributes = enabled ? [] : [.disabled]
             emit(action)
@@ -1422,6 +1470,17 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     stackView.axis = .horizontal
     stackView.spacing = 0
     stackView.distribution = .fill
+    // Centre, not the default .fill. The stack is pinned to all four edges of a
+    // containerView pegged to blurViewHeight (the pill), while each button below
+    // gets a required height of its own — 36 plus its padding. Under .fill the
+    // stack also pins every arranged subview top and bottom, demanding the
+    // button be as tall as the pill, and the two required constraints cannot
+    // both hold: a 48pt pill around a 40pt button logged an unsatisfiable
+    // constraint every time a bar was built, and UIKit recovered by breaking
+    // the button's height. Centring leaves the button its own height and puts
+    // it in the middle of the pill, which is what the two numbers meant all
+    // along.
+    stackView.alignment = .center
     stackView.translatesAutoresizingMaskIntoConstraints = false
     
     // Create buttons
@@ -1496,9 +1555,23 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         buttonHeight = defaultHeight + buttonPaddings[i].top + buttonPaddings[i].bottom
       }
       
+      let buttonHeightConstraint =
+        button.heightAnchor.constraint(equalToConstant: buttonHeight)
+      // 999: on iOS 26 the bar hands its item wrapper a placeholder height (36)
+      // on the first pass, which a required 40 or 48 here flatly contradicts.
+      buttonHeightConstraint.priority = .required - 1
+      let buttonWidthConstraint =
+        button.widthAnchor.constraint(equalToConstant: buttonWidths[i])
+      // 999 for the width too. These are summed into totalWidth below and the
+      // container pinned to it, but UIKit measures the bar's item area itself
+      // and its answer does not land on the same fraction -- three buttons of
+      // 42.5 + 42 + 42 make 126.5 against a platter of 126.667. Two required
+      // constraints a sixth of a point apart is still a contradiction, and it
+      // logged one every time a bar with actions was built.
+      buttonWidthConstraint.priority = .required - 1
       NSLayoutConstraint.activate([
-        button.widthAnchor.constraint(equalToConstant: buttonWidths[i]),
-        button.heightAnchor.constraint(equalToConstant: buttonHeight),
+        buttonWidthConstraint,
+        buttonHeightConstraint,
       ])
     }
     
@@ -1508,6 +1581,16 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     objc_setAssociatedObject(containerView, "buttons", buttons, .OBJC_ASSOCIATION_RETAIN)
     objc_setAssociatedObject(containerView, "buttonWidths", buttonWidths, .OBJC_ASSOCIATION_RETAIN)
     
+    let pillHeightConstraint =
+      containerView.heightAnchor.constraint(equalToConstant: blurViewHeight)
+    // 999, for the same first-pass reason as the button height below it.
+    pillHeightConstraint.priority = .required - 1
+    let pillWidthConstraint =
+      containerView.widthAnchor.constraint(equalToConstant: totalWidth)
+    // And the width, which is the sum of the button widths above and so
+    // inherits their disagreement with the platter's own measurement.
+    pillWidthConstraint.priority = .required - 1
+
     NSLayoutConstraint.activate([
       // Pill view fills the container
       pillView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
@@ -1522,8 +1605,8 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       stackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
       
       // Container size
-      containerView.heightAnchor.constraint(equalToConstant: blurViewHeight),
-      containerView.widthAnchor.constraint(equalToConstant: totalWidth),
+      pillHeightConstraint,
+      pillWidthConstraint,
     ])
     
     // Wrap in a centering container for vertical centering in navigation bar
