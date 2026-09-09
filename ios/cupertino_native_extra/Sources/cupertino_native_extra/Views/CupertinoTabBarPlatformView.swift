@@ -14,6 +14,45 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
   private var currentBadges: [String] = []
   private var currentBadgeColors: [Int?] = []
   private var customImages: [Int: UIImage] = [:]
+  /// The background the Dart side last asked for, kept so a rebuild or a style
+  /// update can reproduce it. `barTintColor` cannot: UIKit ignores it once an
+  /// appearance is assigned, which is why it is not the source of truth here.
+  private var currentBg: UIColor? = nil
+
+  /// One appearance, built the same way everywhere it is needed.
+  ///
+  /// A clear background asks for `configureWithTransparentBackground()`, the
+  /// supported way to say "draw no material" — the default configuration
+  /// installs the system blur, which is what draws the capsule behind the
+  /// items and what no tint colour can remove.
+  @available(iOS 13.0, *)
+  private static func makeAppearance(background: UIColor?) -> UITabBarAppearance {
+    let ap = UITabBarAppearance()
+    if let requested = background, requested.cgColor.alpha == 0 {
+      ap.configureWithTransparentBackground()
+    } else {
+      ap.configureWithDefaultBackground()
+      if let requested = background { ap.backgroundColor = requested }
+    }
+    // No hairline. On a bar pinned to the screen edge this is the divider
+    // between the bar and the content above it; on a floating capsule bar it
+    // is drawn as a stroke all the way around the capsule, which outlines the
+    // bar against whatever it is sitting on however well the two colours are
+    // matched. It is the last thing that gives the capsule away.
+    ap.shadowColor = .clear
+    ap.shadowImage = nil
+    return ap
+  }
+
+  /// Re-applies [currentBg] to whichever bars exist.
+  @available(iOS 13.0, *)
+  private func applyBackgroundAppearance() {
+    let ap = Self.makeAppearance(background: currentBg)
+    for bar in [tabBar, tabBarLeft, tabBarRight].compactMap({ $0 }) {
+      bar.standardAppearance = ap
+      if #available(iOS 15.0, *) { bar.scrollEdgeAppearance = ap }
+    }
+  }
   private var customImageSizes: [Int: CGFloat] = [:]
   private var leftInsetVal: CGFloat = 0
   private var rightInsetVal: CGFloat = 0
@@ -63,6 +102,7 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
     super.init()
 
     self.selectedIndex = selectedIndex
+    self.currentBg = bg
     container.backgroundColor = .clear
     if #available(iOS 13.0, *) { container.overrideUserInterfaceStyle = isDark ? .dark : .light }
 
@@ -100,8 +140,7 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
     // Create appearance for iOS 13+
     let appearance: UITabBarAppearance? = {
       if #available(iOS 13.0, *) {
-        let ap = UITabBarAppearance()
-        ap.configureWithDefaultBackground()
+        let ap = Self.makeAppearance(background: bg)
         
         // Apply custom label size if specified (use first non-zero label size as global setting)
         let customLabelSize = labelSizes.first { $0.doubleValue > 0 }?.doubleValue
@@ -267,7 +306,7 @@ channel.setMethodCallHandler { [weak self] call, result in
           let labels = self.currentLabels
           let symbols = self.currentSymbols
           let appearance: UITabBarAppearance? = {
-            if #available(iOS 13.0, *) { let ap = UITabBarAppearance(); ap.configureWithDefaultBackground(); return ap }
+            if #available(iOS 13.0, *) { return Self.makeAppearance(background: self.currentBg) }
             return nil
           }()
           func buildItems(_ range: Range<Int>) -> [UITabBarItem] {
@@ -370,9 +409,18 @@ channel.setMethodCallHandler { [weak self] call, result in
           }
           if let n = args["backgroundColor"] as? NSNumber {
             let c = Self.colorFromARGB(n.intValue)
-            if let bar = self.tabBar { bar.barTintColor = c }
-            if let left = self.tabBarLeft { left.barTintColor = c }
-            if let right = self.tabBarRight { right.barTintColor = c }
+            self.currentBg = c
+            // Through the appearance, not `barTintColor`: the latter is the
+            // pre-iOS 13 API and is ignored once an appearance is assigned, so
+            // setting it here changed nothing at all. This is the path a live
+            // background change comes down, so it has to actually take effect.
+            if #available(iOS 13.0, *) {
+              self.applyBackgroundAppearance()
+            } else {
+              if let bar = self.tabBar { bar.barTintColor = c }
+              if let left = self.tabBarLeft { left.barTintColor = c }
+              if let right = self.tabBarRight { right.barTintColor = c }
+            }
           }
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing style", details: nil)) }
