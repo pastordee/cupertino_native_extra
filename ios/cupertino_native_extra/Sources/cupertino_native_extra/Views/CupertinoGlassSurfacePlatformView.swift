@@ -54,16 +54,20 @@ class CupertinoGlassSurfacePlatformView: NSObject, FlutterPlatformView {
   private var container: UIVisualEffectView?
   /// One effect view per element, in the order Dart described them.
   private var elementViews: [UIVisualEffectView] = []
+  /// Reports the finger to Dart without taking it away from the glass.
+  private var touchReporter: UILongPressGestureRecognizer? = nil
 
   /// Element geometry as last given, in logical points relative to this view.
   private var elements: [GlassElement] = []
   private var spacing: CGFloat = 0
   private var glassStyleIsClear: Bool = false
   private var tint: UIColor? = nil
+  private var interactive: Bool = false
 
   private struct GlassElement {
     var frame: CGRect
     var cornerRadius: CGFloat
+    var opacity: CGFloat
   }
 
   init(
@@ -81,20 +85,24 @@ class CupertinoGlassSurfacePlatformView: NSObject, FlutterPlatformView {
     super.init()
 
     _view.backgroundColor = .clear
-    // Purely a backdrop. Flutter owns every control drawn over it, and a
-    // platform view that swallowed touches would make them all dead.
+    // Off unless asked for. Flutter owns every control drawn over this, and a
+    // platform view that swallowed touches would make them all dead. Turned on
+    // only when the caller has arranged for the touches to arrive here on
+    // purpose — see `interactive`.
     _view.isUserInteractionEnabled = false
 
     if let dict = args as? [String: Any] {
       if let s = dict["spacing"] as? NSNumber { spacing = CGFloat(truncating: s) }
       if let style = dict["style"] as? String { glassStyleIsClear = (style == "clear") }
       if let n = dict["tint"] as? NSNumber { tint = Self.colorFromARGB(n.intValue) }
+      if let i = dict["interactive"] as? NSNumber { interactive = i.boolValue }
       if #available(iOS 13.0, *), let dark = dict["isDark"] as? NSNumber {
         _view.overrideUserInterfaceStyle = dark.boolValue ? .dark : .light
       }
       elements = Self.parseElements(dict["elements"])
     }
 
+    applyInteractive()
     buildContainer()
     syncElementViews()
 
@@ -125,6 +133,10 @@ class CupertinoGlassSurfacePlatformView: NSObject, FlutterPlatformView {
           if let style = args["style"] as? String {
             self.glassStyleIsClear = (style == "clear")
           }
+          if let i = args["interactive"] as? NSNumber {
+            self.interactive = i.boolValue
+            self.applyInteractive()
+          }
           if #available(iOS 13.0, *), let dark = args["isDark"] as? NSNumber {
             self._view.overrideUserInterfaceStyle = dark.boolValue ? .dark : .light
           }
@@ -140,6 +152,57 @@ class CupertinoGlassSurfacePlatformView: NSObject, FlutterPlatformView {
   }
 
   func view() -> UIView { return _view }
+
+  /// Opens or closes this view to touches, and installs the recogniser that
+  /// reports them back to Dart.
+  ///
+  /// The recogniser observes rather than consumes: `cancelsTouchesInView` off
+  /// and simultaneous recognition allowed, so UIKit still delivers the same
+  /// touches to the glass and the interactive effect still runs. Taking them
+  /// would report the finger accurately and leave the glass ignoring it, which
+  /// is the exact thing this is here to fix.
+  private func applyInteractive() {
+    _view.isUserInteractionEnabled = interactive
+    container?.isUserInteractionEnabled = interactive
+    for v in elementViews { v.isUserInteractionEnabled = interactive }
+
+    if interactive {
+      if touchReporter == nil {
+        let g = UILongPressGestureRecognizer(
+          target: self,
+          action: #selector(handleTouch(_:))
+        )
+        // Zero delay, so this is a raw touch reporter and not a long press.
+        g.minimumPressDuration = 0
+        g.cancelsTouchesInView = false
+        g.delaysTouchesBegan = false
+        g.delaysTouchesEnded = false
+        g.delegate = self
+        _view.addGestureRecognizer(g)
+        touchReporter = g
+      }
+    } else if let g = touchReporter {
+      _view.removeGestureRecognizer(g)
+      touchReporter = nil
+    }
+  }
+
+  @objc private func handleTouch(_ g: UILongPressGestureRecognizer) {
+    let phase: String
+    switch g.state {
+    case .began: phase = "down"
+    case .changed: phase = "move"
+    case .ended: phase = "up"
+    case .cancelled, .failed: phase = "cancel"
+    default: return
+    }
+    let p = g.location(in: _view)
+    channel.invokeMethod("onTouch", arguments: [
+      "phase": phase,
+      "x": Double(p.x),
+      "y": Double(p.y),
+    ])
+  }
 
   // MARK: - Building
 
@@ -162,7 +225,7 @@ class CupertinoGlassSurfacePlatformView: NSObject, FlutterPlatformView {
     view.frame = _view.bounds
     view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     view.backgroundColor = .clear
-    view.isUserInteractionEnabled = false
+    view.isUserInteractionEnabled = interactive
     _view.addSubview(view)
     container = view
 
@@ -181,14 +244,18 @@ class CupertinoGlassSurfacePlatformView: NSObject, FlutterPlatformView {
         // Left non-interactive on purpose: the interactive glass reacts to
         // touches, and every touch here belongs to a Flutter widget drawn on
         // top, so the reaction would fire in the wrong place.
-        glass.isInteractive = false
+        // The property that makes the glass follow a finger. It reacts to
+        // touches delivered to this view, so it is worth nothing unless the
+        // view is also taking them — hence the pairing with `interactive`
+        // rather than a flag of its own.
+        glass.isInteractive = interactive
         if let tint = tint { glass.tintColor = tint }
         effect = glass
       } else {
         effect = UIBlurEffect(style: .systemMaterial)
       }
       let v = UIVisualEffectView(effect: effect)
-      v.isUserInteractionEnabled = false
+      v.isUserInteractionEnabled = interactive
       v.clipsToBounds = true
       container.contentView.addSubview(v)
       elementViews.append(v)
@@ -234,6 +301,11 @@ class CupertinoGlassSurfacePlatformView: NSObject, FlutterPlatformView {
       if #available(iOS 13.0, *) {
         v.layer.cornerCurve = radius >= limit - 0.5 ? .circular : .continuous
       }
+      // Fading the view rather than adding and removing it. A shape that
+      // appears at full strength pops, and rebuilding the effect to make it
+      // appear would restart the glass mid-animation.
+      v.alpha = element.opacity
+      v.isHidden = element.opacity <= 0.001
     }
   }
 
@@ -247,9 +319,11 @@ class CupertinoGlassSurfacePlatformView: NSObject, FlutterPlatformView {
       let w = (item["width"] as? NSNumber).map { CGFloat(truncating: $0) } ?? 0
       let h = (item["height"] as? NSNumber).map { CGFloat(truncating: $0) } ?? 0
       let r = (item["cornerRadius"] as? NSNumber).map { CGFloat(truncating: $0) } ?? 0
+      let o = (item["opacity"] as? NSNumber).map { CGFloat(truncating: $0) } ?? 1
       return GlassElement(
         frame: CGRect(x: x, y: y, width: w, height: h),
-        cornerRadius: r
+        cornerRadius: r,
+        opacity: max(0, min(1, o))
       )
     }
   }
@@ -260,5 +334,17 @@ class CupertinoGlassSurfacePlatformView: NSObject, FlutterPlatformView {
     let g = CGFloat((argb >> 8) & 0xFF) / 255.0
     let b = CGFloat(argb & 0xFF) / 255.0
     return UIColor(red: r, green: g, blue: b, alpha: a)
+  }
+}
+
+extension CupertinoGlassSurfacePlatformView: UIGestureRecognizerDelegate {
+  /// Never exclusive. The glass's own interactive handling is another
+  /// recogniser on the same touches, and refusing to share would silently turn
+  /// the effect off again.
+  func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
+    shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+  ) -> Bool {
+    return true
   }
 }
