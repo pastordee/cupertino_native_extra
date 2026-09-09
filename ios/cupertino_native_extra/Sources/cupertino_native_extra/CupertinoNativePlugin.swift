@@ -61,6 +61,9 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
     // Register native sheet header view for UiKitView integration
     let sheetHeaderFactory = CupertinoNativeSheetHeaderViewFactory(messenger: registrar.messenger())
     registrar.register(sheetHeaderFactory, withId: "CupertinoNativeSheetHeader")
+
+    let glassSurfaceFactory = CupertinoGlassSurfaceFactory(messenger: registrar.messenger())
+    registrar.register(glassSurfaceFactory, withId: "CupertinoNativeGlassSurface")
     
     // Initialize action sheet handler
     // Get root view controller from the app delegate
