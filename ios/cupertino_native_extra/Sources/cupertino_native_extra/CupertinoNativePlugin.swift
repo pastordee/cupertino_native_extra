@@ -64,6 +64,9 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
 
     let glassSurfaceFactory = CupertinoGlassSurfaceFactory(messenger: registrar.messenger())
     registrar.register(glassSurfaceFactory, withId: "CupertinoNativeGlassSurface")
+
+    let verticalBarFactory = CupertinoVerticalBarFactory(messenger: registrar.messenger())
+    registrar.register(verticalBarFactory, withId: "CupertinoNativeVerticalBar")
     
     // Initialize action sheet handler
     // Get root view controller from the app delegate
@@ -88,9 +91,33 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
     switch call.method {
     case "getPlatformVersion":
       result("iOS " + UIDevice.current.systemVersion)
+    case "getVerticalBarEdge":
+      // iOS 27.1's `UITraitCollection.verticalBarEdge`: which edge the system
+      // puts tab bars and toolbars on (iPhone Duo's outer display, its inner
+      // one in landscape), or none. Read by key so the plugin still compiles
+      // against SDKs that predate it; those report "none".
+      result(Self.verticalBarEdge())
     default:
       result(FlutterMethodNotImplemented)
     }
   }
+
+  /// "leading", "trailing" or "none".
+  static func verticalBarEdge() -> String {
+    let scene = UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .first { $0.activationState == .foregroundActive }
+      ?? UIApplication.shared.connectedScenes.first as? UIWindowScene
+    guard let traits = scene?.windows.first?.rootViewController?.traitCollection
+      ?? scene?.traitCollection
+    else { return "none" }
+    guard traits.responds(to: NSSelectorFromString("verticalBarEdge")),
+      let raw = traits.value(forKey: "verticalBarEdge") as? Int
+    else { return "none" }
+    switch raw {
+    case 1: return "leading"
+    case 2: return "trailing"
+    default: return "none"
+    }
+  }
 }
- 
