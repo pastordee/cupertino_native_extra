@@ -174,6 +174,28 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
           self.setButtonContent(title: nil, image: image, iconOnly: true)
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing icon args", details: nil)) }
+      case "setButtonImage":
+        // An app's own artwork instead of an SF Symbol. Drawn at the size asked
+        // for and made a template, so the button's style colours it the way it
+        // would a symbol — prominentGlass included.
+        if let args = call.arguments as? [String: Any],
+           let data = args["imageData"] as? FlutterStandardTypedData,
+           let source = UIImage(data: data.data) {
+          let side = CGFloat(truncating: (args["imageSize"] as? NSNumber) ?? 22)
+          let aspect = source.size.height > 0 ? source.size.width / source.size.height : 1
+          let size = aspect >= 1
+            ? CGSize(width: side, height: side / aspect)
+            : CGSize(width: side * aspect, height: side)
+          let drawn = UIGraphicsImageRenderer(size: size).image { _ in
+            source.draw(in: CGRect(origin: .zero, size: size))
+          }
+          self.setButtonContent(
+            title: nil,
+            image: drawn.withRenderingMode(.alwaysTemplate),
+            iconOnly: true
+          )
+          result(nil)
+        } else { result(FlutterError(code: "bad_args", message: "Missing imageData", details: nil)) }
       case "setBrightness":
         if let args = call.arguments as? [String: Any], let isDark = (args["isDark"] as? NSNumber)?.boolValue {
           if #available(iOS 13.0, *) { self.container.overrideUserInterfaceStyle = isDark ? .dark : .light }

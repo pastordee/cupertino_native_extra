@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -23,6 +26,8 @@ class CNButton extends StatefulWidget {
     this.shrinkWrap = false,
     this.style = CNButtonStyle.plain,
   }) : icon = null,
+       image = null,
+       imageSize = null,
        width = null,
        round = false;
 
@@ -36,6 +41,32 @@ class CNButton extends StatefulWidget {
     double size = 44.0,
     this.style = CNButtonStyle.glass,
   }) : label = null,
+       image = null,
+       imageSize = null,
+       round = true,
+       width = size,
+       height = size,
+       shrinkWrap = false,
+       super();
+
+  /// A round button showing a custom image rather than an SF Symbol — an app's
+  /// own icon artwork on the same native glass.
+  ///
+  /// The image is drawn as a template: its shape is kept and its colour comes
+  /// from the button, so [tint] and [style] colour it exactly as they would a
+  /// symbol ([CNButtonStyle.prominentGlass] fills the glass with [tint] and
+  /// draws the image in a readable colour on top).
+  const CNButton.image({
+    super.key,
+    required ImageProvider this.image,
+    this.imageSize = 22.0,
+    this.onPressed,
+    this.enabled = true,
+    this.tint,
+    double size = 44.0,
+    this.style = CNButtonStyle.glass,
+  }) : label = null,
+       icon = null,
        round = true,
        width = size,
        height = size,
@@ -46,6 +77,12 @@ class CNButton extends StatefulWidget {
   final String? label; // null in icon mode
   /// Button icon (non-null in icon mode).
   final CNSymbol? icon; // non-null in icon mode
+
+  /// Custom image (non-null in image mode). See [CNButton.image].
+  final ImageProvider? image;
+
+  /// Point size the image is drawn at, in image mode.
+  final double? imageSize;
   /// Callback when pressed.
   final VoidCallback? onPressed;
 
@@ -70,7 +107,7 @@ class CNButton extends StatefulWidget {
   final bool round;
 
   /// Whether this instance is configured as the icon variant.
-  bool get isIcon => icon != null;
+  bool get isIcon => icon != null || image != null;
 
   @override
   State<CNButton> createState() => _CNButtonState();
@@ -89,6 +126,13 @@ class _CNButtonState extends State<CNButton> {
   Offset? _downPosition;
   bool _pressed = false;
 
+  /// The custom image's bytes once decoded, and what they were decoded from —
+  /// so a rebuild with the same image sends nothing.
+  Uint8List? _imageBytes;
+  ImageProvider? _imageSource;
+  double? _sentImageSize;
+  Uint8List? _sentImageBytes;
+
   // brightnessOf resolves a null Cupertino brightness to the platform
   // brightness, so this tracks a live system light<->dark switch (and
   // registers the dependency that triggers didChangeDependencies).
@@ -104,9 +148,69 @@ class _CNButtonState extends State<CNButton> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadImageIfNeeded();
+  }
+
+  @override
   void didUpdateWidget(covariant CNButton oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _loadImageIfNeeded();
     _syncPropsToNativeIfNeeded();
+  }
+
+  /// Decodes [CNButton.image] to PNG bytes for the native side, which cannot
+  /// read a Flutter asset itself.
+  Future<void> _loadImageIfNeeded() async {
+    final source = widget.image;
+    if (source == null || source == _imageSource) return;
+    _imageSource = source;
+    final bytes = await _loadImageAsBytes(source);
+    if (!mounted || source != _imageSource || bytes == null) return;
+    setState(() => _imageBytes = bytes);
+    _sendImageIfNeeded();
+  }
+
+  Future<void> _sendImageIfNeeded() async {
+    final ch = _channel;
+    final bytes = _imageBytes;
+    if (ch == null || bytes == null) return;
+    final size = widget.imageSize ?? 22.0;
+    if (identical(bytes, _sentImageBytes) && size == _sentImageSize) return;
+    _sentImageBytes = bytes;
+    _sentImageSize = size;
+    try {
+      await ch.invokeMethod('setButtonImage', {
+        'imageData': bytes,
+        'imageSize': size,
+      });
+    } catch (_) {}
+  }
+
+  Future<Uint8List?> _loadImageAsBytes(ImageProvider provider) {
+    final completer = Completer<Uint8List?>();
+    final stream = provider.resolve(const ImageConfiguration());
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (info, _) async {
+        stream.removeListener(listener);
+        try {
+          final data = await info.image.toByteData(
+            format: ui.ImageByteFormat.png,
+          );
+          completer.complete(data?.buffer.asUint8List());
+        } catch (_) {
+          completer.complete(null);
+        }
+      },
+      onError: (_, _) {
+        stream.removeListener(listener);
+        if (!completer.isCompleted) completer.complete(null);
+      },
+    );
+    stream.addListener(listener);
+    return completer.future;
   }
 
   @override
@@ -132,7 +236,14 @@ class _CNButtonState extends State<CNButton> {
           onPressed: (widget.enabled && widget.onPressed != null)
               ? widget.onPressed
               : null,
-          child: widget.isIcon
+          child: widget.image != null
+              ? Image(
+                  image: widget.image!,
+                  width: widget.imageSize,
+                  height: widget.imageSize,
+                  color: _effectiveTint,
+                )
+              : widget.isIcon
               ? Icon(CupertinoIcons.ellipsis, size: widget.icon?.size)
               : Text(widget.label ?? ''),
         ),
@@ -239,6 +350,8 @@ class _CNButtonState extends State<CNButton> {
     if (!widget.isIcon) {
       _requestIntrinsicSize();
     }
+    _sentImageBytes = null;
+    _sendImageIfNeeded();
   }
 
   Future<dynamic> _onMethodCall(MethodCall call) async {
@@ -290,7 +403,9 @@ class _CNButtonState extends State<CNButton> {
       _requestIntrinsicSize();
     }
 
-    if (widget.isIcon) {
+    if (widget.image != null) {
+      _sendImageIfNeeded();
+    } else if (widget.isIcon) {
       final iconName = preIconName;
       final iconSize = preIconSize;
       final iconColor = preIconColor;
@@ -319,6 +434,11 @@ class _CNButtonState extends State<CNButton> {
         updates['buttonIconGradientEnabled'] = widget.icon!.gradient;
       }
       if (updates.isNotEmpty) {
+        // The native side rebuilds the image from whatever it is sent, so a
+        // colour-only update without the name drew no icon at all.
+        if (iconName != null) updates['buttonIconName'] = iconName;
+        if (iconSize != null) updates['buttonIconSize'] = iconSize;
+        if (iconColor != null) updates['buttonIconColor'] = iconColor;
         await ch.invokeMethod('setButtonIcon', updates);
       }
     }
