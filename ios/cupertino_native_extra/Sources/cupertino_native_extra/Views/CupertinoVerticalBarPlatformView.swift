@@ -58,6 +58,12 @@ class CupertinoVerticalBarPlatformView: NSObject, FlutterPlatformView {
   private var container: UIVisualEffectView?
   private var buttons: [UIButton] = []
 
+  /// Tab mode: the selection lozenge and the capsule it moves in, for the
+  /// drag across tabs the system tab bar has.
+  private var pill: UIView?
+  private weak var tabCapsule: UIView?
+  private var tabRange: Range<Int> = 0..<0
+
   private struct Item {
     var symbol: String?
     var image: UIImage?
@@ -183,6 +189,13 @@ class CupertinoVerticalBarPlatformView: NSObject, FlutterPlatformView {
           pill.layer.cornerRadius = itemSize / 2
           pill.isUserInteractionEnabled = false
           capsule.contentView.addSubview(pill)
+          self.pill = pill
+          self.tabCapsule = capsule
+          self.tabRange = (flat - k)..<(flat - k + items.count)
+          // Sliding a finger along the bar moves the selection with it, and
+          // lifting selects where it ended — the native tab bar's drag.
+          let pan = UIPanGestureRecognizer(target: self, action: #selector(dragged(_:)))
+          capsule.contentView.addGestureRecognizer(pan)
         }
 
         let button = UIButton(type: .system)
@@ -255,6 +268,35 @@ class CupertinoVerticalBarPlatformView: NSObject, FlutterPlatformView {
       children.append(action)
     }
     return UIMenu(children: children)
+  }
+
+  @objc private func dragged(_ g: UIPanGestureRecognizer) {
+    guard let pill = pill, let capsule = tabCapsule, !tabRange.isEmpty else { return }
+    let count = tabRange.count
+    let y = g.location(in: capsule).y - inset
+    let slot = min(max(Int(floor(y / itemSize)), 0), count - 1)
+    switch g.state {
+    case .began, .changed:
+      let centre = min(max(y, itemSize / 2), itemSize * CGFloat(count) - itemSize / 2)
+      UIView.animate(withDuration: 0.12) {
+        pill.center = CGPoint(x: self.inset + self.itemSize / 2, y: self.inset + centre)
+        pill.transform = CGAffineTransform(scaleX: 1.12, y: 1.12)
+      }
+    case .ended:
+      let index = tabRange.lowerBound + slot
+      UIView.animate(
+        withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0
+      ) {
+        pill.transform = .identity
+        pill.frame = CGRect(
+          x: self.inset, y: self.inset + CGFloat(slot) * self.itemSize,
+          width: self.itemSize, height: self.itemSize)
+      }
+      UISelectionFeedbackGenerator().selectionChanged()
+      channel.invokeMethod("pressed", arguments: ["index": index])
+    default:
+      UIView.animate(withDuration: 0.2) { pill.transform = .identity }
+    }
   }
 
   @objc private func tapped(_ sender: UIButton) {

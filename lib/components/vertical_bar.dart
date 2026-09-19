@@ -301,6 +301,10 @@ class _CNVerticalBarState extends State<CNVerticalBar> {
           Factory<LongPressGestureRecognizer>(
             () => LongPressGestureRecognizer(),
           ),
+          // The drag across tabs belongs to the native bar.
+          Factory<VerticalDragGestureRecognizer>(
+            () => VerticalDragGestureRecognizer(),
+          ),
         },
         onPlatformViewCreated: (id) {
           final ch = MethodChannel('CupertinoNativeVerticalBar_$id');
