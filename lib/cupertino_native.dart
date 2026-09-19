@@ -106,6 +106,7 @@ export 'style/button_style.dart';
 export 'components/button.dart';
 export 'components/glass_surface.dart';
 export 'components/vertical_bar.dart';
+export 'components/hinge.dart';
 
 import 'cupertino_native_platform_interface.dart';
 

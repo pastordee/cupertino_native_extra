@@ -7,6 +7,7 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
   private static var sheetHandler: CupertinoSheetHandler?
   private static var customSheetHandler: CupertinoCustomSheetHandler?
   private static var searchControllerHandler: CupertinoSearchControllerHandler?
+  private static var hingeHandler: CupertinoHingeHandler?
   @available(iOS 15.0, *)
   private static var ios26SearchTabBarHandler: IOS26SearchTabBarHandler?
   
@@ -67,6 +68,8 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
 
     let verticalBarFactory = CupertinoVerticalBarFactory(messenger: registrar.messenger())
     registrar.register(verticalBarFactory, withId: "CupertinoNativeVerticalBar")
+
+    hingeHandler = CupertinoHingeHandler(messenger: registrar.messenger())
     
     // Initialize action sheet handler
     // Get root view controller from the app delegate
