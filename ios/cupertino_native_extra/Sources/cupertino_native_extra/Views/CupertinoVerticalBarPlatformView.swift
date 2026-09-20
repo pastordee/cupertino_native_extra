@@ -206,8 +206,15 @@ class CupertinoVerticalBarPlatformView: NSObject, FlutterPlatformView {
             UIImage.SymbolConfiguration(pointSize: 18, weight: .medium))
         }
         config.image = base
+        // A prominent group is FILLED with the tint, so its glyph has to read
+        // against that fill rather than always being white: an app whose
+        // accent is white in dark mode drew a white symbol on a white capsule
+        // and the button looked blank (Prayer Circle's "new prayer", owner,
+        // 2026-09-20).
         let fg: UIColor =
-          isProminent ? .white : (tabMode ? (isSelected ? tint : .label) : tint)
+          isProminent
+          ? Self.legible(on: tint)
+          : (tabMode ? (isSelected ? tint : .label) : tint)
         config.baseForegroundColor = fg
         config.imageColorTransformer = UIConfigurationColorTransformer { _ in fg }
         config.contentInsets = .zero
@@ -230,6 +237,17 @@ class CupertinoVerticalBarPlatformView: NSObject, FlutterPlatformView {
       }
       y += height + gap
     }
+  }
+
+  /// Black or white, whichever can be read on top of `fill` — the same choice
+  /// UIKit makes for a filled button's label.
+  private static func legible(on fill: UIColor) -> UIColor {
+    var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+    let resolved = fill.resolvedColor(with: UITraitCollection.current)
+    guard resolved.getRed(&r, green: &g, blue: &b, alpha: &a) else { return .white }
+    // Rec. 709 luma, the usual threshold for "is this a light colour".
+    let luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return luma > 0.6 ? .black : .white
   }
 
   private func makeBadge(_ text: String, in cell: CGRect) -> UIView {
