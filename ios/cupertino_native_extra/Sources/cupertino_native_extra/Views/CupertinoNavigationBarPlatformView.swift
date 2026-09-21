@@ -859,13 +859,14 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     container.addSubview(navigationBar)
 
     // A UINavigationBar standing on its own — not inside a
-    // UINavigationController — gets none of the system's side margins, so its
-    // first bar button sat flush against the screen edge on every screen with a
-    // back button (owner, 2026-09-18). Setting the bar's layoutMargins has no
-    // effect on where UIKit places bar button items, so inset the bar itself by
-    // the iPhone's standard 16pt. Only when it's transparent (the glass bars):
-    // an opaque bar's blurred background must still span the full width.
-    let sideInset: CGFloat = transparent ? 16 : 0
+    // UINavigationController — was reported to get none of the system's side
+    // margins, and a glass bar was inset 16pt to put its buttons back where
+    // the iPhone puts them (owner, 2026-09-18). It does lay its items out with
+    // a margin of its own, so that 16 was added to one already there: on a
+    // phone the whole bar read as shrunk into the middle of the screen, the
+    // buttons ~33pt in and the title squeezed between them (owner,
+    // 2026-09-21). The bar spans its container again.
+    let sideInset: CGFloat = 0
     NSLayoutConstraint.activate([
       navigationBar.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: sideInset),
       navigationBar.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -sideInset),
