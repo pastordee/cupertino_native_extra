@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -536,6 +538,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
   String? _lastSegmentSignature;
   int? _lastTint;
   bool? _lastTransparent;
+  String? _lastActionSignature;
 
   // brightnessOf resolves a null Cupertino brightness to the platform
   // brightness, so this tracks a live system light<->dark switch (and
@@ -601,117 +604,6 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       );
     }
 
-    // No need to filter actions anymore - segmented control is separate
-    final leadingIcons =
-        widget.leading
-            ?.map((e) => e.isSpacer ? '' : (e.icon?.name ?? ''))
-            .toList() ??
-        [];
-    final leadingLabels =
-        widget.leading
-            ?.map((e) => e.isSpacer ? '' : (e.label ?? ''))
-            .toList() ??
-        [];
-    final leadingPaddings =
-        widget.leading?.map((e) => e.padding ?? 0.0).toList() ?? [];
-    final leadingLabelSizes =
-        widget.leading?.map((e) => e.labelSize ?? 0.0).toList() ?? [];
-    final leadingIconSizes =
-        widget.leading
-            ?.map((e) => e.iconSize ?? e.icon?.size ?? 0.0)
-            .toList() ??
-        [];
-    final leadingSpacers =
-        widget.leading
-            ?.map(
-              (e) => e.isFlexibleSpace
-                  ? 'flexible'
-                  : (e.isFixedSpace ? 'fixed' : ''),
-            )
-            .toList() ??
-        [];
-    final leadingTints =
-        widget.leading
-            ?.map((e) => resolveColorToArgb(e.tint, context) ?? 0)
-            .toList() ??
-        [];
-    final leadingBadgeValues =
-        widget.leading?.map((e) => e.badgeValue ?? '').toList() ?? [];
-    final leadingBadgeColors =
-        widget.leading
-            ?.map((e) => resolveColorToArgb(e.badgeColor, context) ?? 0)
-            .toList() ??
-        [];
-    final trailingIcons =
-        widget.trailing
-            ?.map((e) => e.isSpacer ? '' : (e.icon?.name ?? ''))
-            .toList() ??
-        [];
-    final trailingLabels =
-        widget.trailing
-            ?.map((e) => e.isSpacer ? '' : (e.label ?? ''))
-            .toList() ??
-        [];
-    final trailingPaddings =
-        widget.trailing?.map((e) => e.padding ?? 0.0).toList() ?? [];
-    final trailingLabelSizes =
-        widget.trailing?.map((e) => e.labelSize ?? 0.0).toList() ?? [];
-    final trailingIconSizes =
-        widget.trailing
-            ?.map((e) => e.iconSize ?? e.icon?.size ?? 0.0)
-            .toList() ??
-        [];
-    final trailingSpacers =
-        widget.trailing
-            ?.map(
-              (e) => e.isFlexibleSpace
-                  ? 'flexible'
-                  : (e.isFixedSpace ? 'fixed' : ''),
-            )
-            .toList() ??
-        [];
-    final trailingTints =
-        widget.trailing
-            ?.map((e) => resolveColorToArgb(e.tint, context) ?? 0)
-            .toList() ??
-        [];
-    final trailingBadgeValues =
-        widget.trailing?.map((e) => e.badgeValue ?? '').toList() ?? [];
-    final trailingBadgeColors =
-        widget.trailing
-            ?.map((e) => resolveColorToArgb(e.badgeColor, context) ?? 0)
-            .toList() ??
-        [];
-    final leadingImageAssets =
-        widget.leading?.map((e) => e.imageAsset ?? '').toList() ?? [];
-    final trailingImageAssets =
-        widget.trailing?.map((e) => e.imageAsset ?? '').toList() ?? [];
-
-    // Collect popup menu data for native implementation
-    final leadingPopupMenus =
-        widget.leading?.map((action) {
-          if (action.hasPopupMenu) {
-            return action.popupMenuItems!
-                .map(_serializePopupEntry)
-                .whereType<Map<String, dynamic>>()
-                .toList();
-          }
-          return null;
-        }).toList() ??
-        [];
-
-    final trailingPopupMenus =
-        widget.trailing?.map((action) {
-          if (action.hasPopupMenu) {
-            return action.popupMenuItems!
-                .map(_serializePopupEntry)
-                .whereType<Map<String, dynamic>>()
-                .toList();
-          }
-          return null;
-        }).toList() ??
-        [];
-
     // Use title only if no segmented control is present
     final effectiveTitle = hasSegmentedControl ? '' : (widget.title ?? '');
 
@@ -719,28 +611,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       'title': effectiveTitle,
       'titleSize': widget.titleSize ?? 0.0,
       'titleClickable': widget.onTitlePressed != null && !hasSegmentedControl,
-      'leadingIcons': leadingIcons,
-      'leadingLabels': leadingLabels,
-      'leadingPaddings': leadingPaddings,
-      'leadingLabelSizes': leadingLabelSizes,
-      'leadingIconSizes': leadingIconSizes,
-      'leadingSpacers': leadingSpacers,
-      'leadingTints': leadingTints,
-      'leadingBadgeValues': leadingBadgeValues,
-      'leadingBadgeColors': leadingBadgeColors,
-      'leadingImageAssets': leadingImageAssets,
-      'leadingPopupMenus': leadingPopupMenus,
-      'trailingIcons': trailingIcons,
-      'trailingLabels': trailingLabels,
-      'trailingPaddings': trailingPaddings,
-      'trailingLabelSizes': trailingLabelSizes,
-      'trailingIconSizes': trailingIconSizes,
-      'trailingSpacers': trailingSpacers,
-      'trailingTints': trailingTints,
-      'trailingBadgeValues': trailingBadgeValues,
-      'trailingBadgeColors': trailingBadgeColors,
-      'trailingImageAssets': trailingImageAssets,
-      'trailingPopupMenus': trailingPopupMenus,
+      ..._actionParams(),
       'largeTitle': widget.largeTitle,
       'transparent': widget.transparent,
       'isDark': _isDark,
@@ -809,6 +680,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
     _lastTint = resolveColorToArgb(_effectiveTint, context);
     _lastIsDark = _isDark;
     _lastTransparent = widget.transparent;
+    _lastActionSignature = _actionSignature(_actionParams());
     _requestIntrinsicSize();
   }
 
@@ -866,6 +738,85 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       widget.onSegmentedControlValueChanged?.call(selectedIndex);
     }
     return null;
+  }
+
+  /// The leading and trailing actions as the native bar reads them: parallel
+  /// lists per side, keyed `<side>Icons`, `<side>Labels` and so on. Sent in the
+  /// creation params and again by [_syncActionsIfNeeded].
+  Map<String, dynamic> _actionParams() => <String, dynamic>{
+    ..._sideParams('leading', widget.leading),
+    ..._sideParams('trailing', widget.trailing),
+  };
+
+  Map<String, dynamic> _sideParams(
+    String side,
+    List<CNNavigationBarAction>? actions,
+  ) {
+    final list = actions ?? const <CNNavigationBarAction>[];
+    return <String, dynamic>{
+      '${side}Icons': [
+        for (final e in list) e.isSpacer ? '' : (e.icon?.name ?? ''),
+      ],
+      '${side}Labels': [for (final e in list) e.isSpacer ? '' : (e.label ?? '')],
+      '${side}Paddings': [for (final e in list) e.padding ?? 0.0],
+      '${side}LabelSizes': [for (final e in list) e.labelSize ?? 0.0],
+      '${side}IconSizes': [
+        for (final e in list) e.iconSize ?? e.icon?.size ?? 0.0,
+      ],
+      '${side}Spacers': [
+        for (final e in list)
+          e.isFlexibleSpace ? 'flexible' : (e.isFixedSpace ? 'fixed' : ''),
+      ],
+      '${side}Tints': [
+        for (final e in list) resolveColorToArgb(e.tint, context) ?? 0,
+      ],
+      '${side}BadgeValues': _badgeValuesOf(actions),
+      '${side}BadgeColors': _badgeColorsOf(actions),
+      '${side}ImageAssets': [for (final e in list) e.imageAsset ?? ''],
+      // Collect popup menu data for native implementation
+      '${side}PopupMenus': [
+        for (final action in list)
+          action.hasPopupMenu
+              ? action.popupMenuItems!
+                    .map(_serializePopupEntry)
+                    .whereType<Map<String, dynamic>>()
+                    .toList()
+              : null,
+      ],
+    };
+  }
+
+  /// Everything about the actions that shapes the buttons, badges aside —
+  /// those have their own lighter sync. `onPressed` is deliberately not in it:
+  /// taps are dispatched against the current `widget` actions, so a callback
+  /// that changes needs nothing sent.
+  String _actionSignature(Map<String, dynamic> params) => jsonEncode({
+    for (final entry in params.entries)
+      if (!entry.key.endsWith('BadgeValues') &&
+          !entry.key.endsWith('BadgeColors'))
+        entry.key: entry.value,
+  });
+
+  /// Pushes added, removed or changed actions to the native bar.
+  ///
+  /// Actions are part of the platform view's creation params, so without this
+  /// an action that appears after the first frame — a Send button that shows
+  /// once something is selected, say — gets an empty slot with nothing drawn
+  /// in it, until something recreates the view.
+  Future<void> _syncActionsIfNeeded() async {
+    final ch = _channel;
+    if (ch == null) return;
+
+    final params = _actionParams();
+    final signature = _actionSignature(params);
+    if (_lastActionSignature == signature) return;
+    _lastActionSignature = signature;
+
+    try {
+      await ch.invokeMethod('setActions', params);
+    } on MissingPluginException {
+      // The macOS bar has no setActions; it keeps the actions it was built with.
+    }
   }
 
   List<String> _badgeValuesOf(List<CNNavigationBarAction>? actions) =>
@@ -955,6 +906,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       await ch.invokeMethod('setStyle', style);
     }
 
+    await _syncActionsIfNeeded();
     await _syncBadgesIfNeeded();
     await _syncSegmentsIfNeeded();
   }

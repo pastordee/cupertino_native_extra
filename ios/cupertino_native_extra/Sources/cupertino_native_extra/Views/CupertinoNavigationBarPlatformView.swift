@@ -45,9 +45,11 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   private var didInitialSegmentScroll = false
   private var currentTint: UIColor? = nil
   private var isTransparent: Bool = false
-  private var leadingPopupMenus: [Any?] = []
   private var middlePopupMenus: [Any?] = []
-  private var trailingPopupMenus: [Any?] = []
+  /// Kept from creation so a later setActions builds its buttons the same way.
+  private var pillHeight: Double? = nil
+  private var currentIsDark: Bool = false
+  private var hasMiddleItems: Bool = false
   private let registrar: FlutterPluginRegistrar
 
   init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger, registrar: FlutterPluginRegistrar) {
@@ -60,16 +62,8 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     var title: String = ""
     var titleSize: Double = 0
     var titleClickable: Bool = false
-    var leadingIcons: [String] = []
-    var leadingLabels: [String] = []
-    var leadingPaddings: [Double] = []
-    var leadingLabelSizes: [Double] = []
-    var leadingIconSizes: [Double] = []
-    var leadingSpacers: [String] = []
-    var leadingTints: [Int] = []
     var leadingBadgeValues: [String] = []
     var leadingBadgeColors: [Int] = []
-    var leadingImageAssets: [String] = []
     var middleIcons: [String] = []
     var middleLabels: [String] = []
     var middlePaddings: [Double] = []
@@ -78,14 +72,6 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     var middleAlignment: String = "center"
     var trailingIcons: [String] = []
     var trailingLabels: [String] = []
-    var trailingPaddings: [Double] = []
-    var trailingLabelSizes: [Double] = []
-    var trailingIconSizes: [Double] = []
-    var trailingSpacers: [String] = []
-    var trailingTints: [Int] = []
-    var trailingBadgeValues: [String] = []
-    var trailingBadgeColors: [Int] = []
-    var trailingImageAssets: [String] = []
     var largeTitle: Bool = false
     var transparent: Bool = false
     var isDark: Bool = false
@@ -105,16 +91,8 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       title = (dict["title"] as? String) ?? ""
       titleSize = (dict["titleSize"] as? Double) ?? 0
       titleClickable = (dict["titleClickable"] as? Bool) ?? false
-      leadingIcons = (dict["leadingIcons"] as? [String]) ?? []
-      leadingLabels = (dict["leadingLabels"] as? [String]) ?? []
-      leadingPaddings = (dict["leadingPaddings"] as? [Double]) ?? []
-      leadingLabelSizes = (dict["leadingLabelSizes"] as? [Double]) ?? []
-      leadingIconSizes = (dict["leadingIconSizes"] as? [Double]) ?? []
-      leadingSpacers = (dict["leadingSpacers"] as? [String]) ?? []
-      leadingTints = (dict["leadingTints"] as? [Int]) ?? []
       leadingBadgeValues = (dict["leadingBadgeValues"] as? [String]) ?? []
       leadingBadgeColors = (dict["leadingBadgeColors"] as? [Int]) ?? []
-      leadingImageAssets = (dict["leadingImageAssets"] as? [String]) ?? []
       middleIcons = (dict["middleIcons"] as? [String]) ?? []
       middleLabels = (dict["middleLabels"] as? [String]) ?? []
       middlePaddings = (dict["middlePaddings"] as? [Double]) ?? []
@@ -123,17 +101,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       middleAlignment = (dict["middleAlignment"] as? String) ?? "center"
       trailingIcons = (dict["trailingIcons"] as? [String]) ?? []
       trailingLabels = (dict["trailingLabels"] as? [String]) ?? []
-      trailingPaddings = (dict["trailingPaddings"] as? [Double]) ?? []
-      trailingLabelSizes = (dict["trailingLabelSizes"] as? [Double]) ?? []
-      trailingIconSizes = (dict["trailingIconSizes"] as? [Double]) ?? []
-      trailingSpacers = (dict["trailingSpacers"] as? [String]) ?? []
-      trailingTints = (dict["trailingTints"] as? [Int]) ?? []
-      trailingBadgeValues = (dict["trailingBadgeValues"] as? [String]) ?? []
-      trailingBadgeColors = (dict["trailingBadgeColors"] as? [Int]) ?? []
-      trailingImageAssets = (dict["trailingImageAssets"] as? [String]) ?? []
-      leadingPopupMenus = (dict["leadingPopupMenus"] as? [Any?]) ?? []
       middlePopupMenus = (dict["middlePopupMenus"] as? [Any?]) ?? []
-      trailingPopupMenus = (dict["trailingPopupMenus"] as? [Any?]) ?? []
       pillHeight = dict["pillHeight"] as? Double
       hasSegmentedControl = (dict["hasSegmentedControl"] as? Bool) ?? false
       segmentedControlLabels = (dict["segmentedControlLabels"] as? [String]) ?? []
@@ -161,6 +129,11 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     }
 
     super.init()
+    self.pillHeight = pillHeight
+    self.currentIsDark = isDark
+    self.hasMiddleItems = !middleIcons.isEmpty || !middleLabels.isEmpty
+    // Set before the buttons are built — buildBarItems tints them with it.
+    self.currentTint = tint
 
     container.backgroundColor = .clear
     if #available(iOS 13.0, *) {
@@ -223,121 +196,15 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       navigationItem.largeTitleDisplayMode = largeTitle ? .always : .never
     }
 
-        // Leading buttons - group consecutive items, split on flexibleSpace
-    if !leadingIcons.isEmpty || !leadingLabels.isEmpty {
-      var barItems: [UIBarButtonItem] = []
-      let count = max(leadingIcons.count, leadingLabels.count)
-
-      var currentGroupIcons: [String] = []
-      var currentGroupLabels: [String] = []
-      var currentGroupPaddings: [Double] = []
-      var currentGroupLabelSizes: [Double] = []
-      var currentGroupIconSizes: [Double] = []
-      var currentGroupIndices: [Int] = []
-      var currentGroupTints: [Int] = []
-      var currentGroupBadgeValues: [String] = []
-      var currentGroupBadgeColors: [Int] = []
-      var currentGroupImageAssets: [String] = []
-      var pendingSpacing: Double = 0.0  // Track spacing to add to next button
-
-      func finalizeCurrentGroup() {
-        if !currentGroupIcons.isEmpty || !currentGroupLabels.isEmpty {
-          let buttonGroup = createButtonGroup(
-            icons: currentGroupIcons,
-            labels: currentGroupLabels,
-            paddings: currentGroupPaddings,
-            labelSizes: currentGroupLabelSizes,
-            iconSizes: currentGroupIconSizes,
-            imageAssets: currentGroupImageAssets,
-            pillHeight: pillHeight,
-            tint: tint,
-            tints: currentGroupTints,
-            badgeValues: currentGroupBadgeValues,
-            badgeColors: currentGroupBadgeColors,
-            isDark: isDark,
-            target: self,
-            action: #selector(leadingTapped(_:)),
-            popupMenus: leadingPopupMenus,
-            location: "leading"
-          )
-
-          // Set tags for all buttons in the group
-          let buttons = findAllButtons(in: buttonGroup)
-          for (idx, button) in buttons.enumerated() {
-            if idx < currentGroupIndices.count {
-              button.tag = currentGroupIndices[idx]
-            }
-          }
-
-          let barItem = UIBarButtonItem(customView: buttonGroup)
-          barItems.append(barItem)
-
-          currentGroupIcons = []
-          currentGroupLabels = []
-          currentGroupPaddings = []
-          currentGroupLabelSizes = []
-          currentGroupIconSizes = []
-          currentGroupIndices = []
-          currentGroupTints = []
-          currentGroupImageAssets = []
-          pendingSpacing = 0.0
-        }
-      }
-
-      for i in 0..<count {
-        let spacerType = i < leadingSpacers.count ? leadingSpacers[i] : ""
-
-        if spacerType == "flexible" {
-          // Finalize current group and add flexible space
-          finalizeCurrentGroup()
-          let flexibleSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-          barItems.append(flexibleSpace)
-        } else if spacerType == "fixed" {
-          // Fixed space - split between previous and next button
-          let fixedSpaceWidth = i < leadingPaddings.count ? leadingPaddings[i] : 0
-          let halfSpace = fixedSpaceWidth / 2.0
-
-          // Add half to the previous button if it exists
-          if !currentGroupPaddings.isEmpty {
-            let lastIndex = currentGroupPaddings.count - 1
-            currentGroupPaddings[lastIndex] += halfSpace
-          }
-
-          // Store the other half for the next button
-          pendingSpacing = halfSpace
-        } else {
-          // Regular button - add to current group
-          let icon = i < leadingIcons.count ? leadingIcons[i] : ""
-          let label = i < leadingLabels.count ? leadingLabels[i] : ""
-          var padding = i < leadingPaddings.count ? leadingPaddings[i] : 0.0
-          let labelSize = i < leadingLabelSizes.count ? leadingLabelSizes[i] : 0.0
-          let iconSize = i < leadingIconSizes.count ? leadingIconSizes[i] : 0.0
-          let tintValue = i < leadingTints.count ? leadingTints[i] : 0
-
-          // Add any pending spacing from a previous fixedSpace
-          padding += pendingSpacing
-          pendingSpacing = 0.0
-
-          currentGroupIcons.append(icon)
-          currentGroupLabels.append(label)
-          currentGroupPaddings.append(padding)
-          currentGroupLabelSizes.append(labelSize)
-          currentGroupIconSizes.append(iconSize)
-          currentGroupIndices.append(i)
-          currentGroupTints.append(tintValue)
-          currentGroupImageAssets.append(i < leadingImageAssets.count ? leadingImageAssets[i] : "")
-
-          let badgeValue = i < leadingBadgeValues.count ? leadingBadgeValues[i] : ""
-          let badgeColor = i < leadingBadgeColors.count ? leadingBadgeColors[i] : 0
-          currentGroupBadgeValues.append(badgeValue)
-          currentGroupBadgeColors.append(badgeColor)
-        }
-      }
-
-      // Finalize any remaining group
-      finalizeCurrentGroup()
-
-      navigationItem.leftBarButtonItems = barItems
+    // Leading buttons - group consecutive items, split on flexibleSpace
+    let leadingBarItems = buildBarItems(
+      BarActions(from: args, prefix: "leading"),
+      location: "leading",
+      tagOffset: 0,
+      action: #selector(leadingTapped(_:))
+    )
+    if !leadingBarItems.isEmpty {
+      navigationItem.leftBarButtonItems = leadingBarItems
     }
 
     // Middle buttons - group consecutive items, split on flexibleSpace
@@ -722,119 +589,13 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     }
 
     // Trailing buttons - group consecutive items, split on flexibleSpace
-    if !trailingIcons.isEmpty || !trailingLabels.isEmpty {
-      var trailingBarItems: [UIBarButtonItem] = []
-      let count = max(trailingIcons.count, trailingLabels.count)
-
-      var currentGroupIcons: [String] = []
-      var currentGroupLabels: [String] = []
-      var currentGroupPaddings: [Double] = []
-      var currentGroupLabelSizes: [Double] = []
-      var currentGroupIconSizes: [Double] = []
-      var currentGroupIndices: [Int] = []
-      var currentGroupTints: [Int] = []
-      var currentGroupBadgeValues: [String] = []
-      var currentGroupBadgeColors: [Int] = []
-      var currentGroupImageAssets: [String] = []
-      var pendingSpacing: Double = 0.0  // Track spacing to add to next button
-
-      func finalizeCurrentGroup() {
-        if !currentGroupIcons.isEmpty || !currentGroupLabels.isEmpty {
-          let buttonGroup = createButtonGroup(
-            icons: currentGroupIcons,
-            labels: currentGroupLabels,
-            paddings: currentGroupPaddings,
-            labelSizes: currentGroupLabelSizes,
-            iconSizes: currentGroupIconSizes,
-            imageAssets: currentGroupImageAssets,
-            pillHeight: pillHeight,
-            tint: tint,
-            tints: currentGroupTints,
-            badgeValues: currentGroupBadgeValues,
-            badgeColors: currentGroupBadgeColors,
-            isDark: isDark,
-            target: self,
-            action: #selector(trailingTapped(_:)),
-            popupMenus: trailingPopupMenus,
-            location: "trailing"
-          )
-
-          // Set tags for all buttons in the group
-          let buttons = findAllButtons(in: buttonGroup)
-          for (idx, button) in buttons.enumerated() {
-            if idx < currentGroupIndices.count {
-              button.tag = 2000 + currentGroupIndices[idx]
-            }
-          }
-
-          let barItem = UIBarButtonItem(customView: buttonGroup)
-          trailingBarItems.append(barItem)
-
-          currentGroupIcons = []
-          currentGroupLabels = []
-          currentGroupPaddings = []
-          currentGroupLabelSizes = []
-          currentGroupIconSizes = []
-          currentGroupIndices = []
-          currentGroupTints = []
-          currentGroupImageAssets = []
-          pendingSpacing = 0.0
-        }
-      }
-
-      for i in 0..<count {
-        let spacerType = i < trailingSpacers.count ? trailingSpacers[i] : ""
-
-        if spacerType == "flexible" {
-          // Finalize current group and add flexible space
-          finalizeCurrentGroup()
-          let flexibleSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-          trailingBarItems.append(flexibleSpace)
-        } else if spacerType == "fixed" {
-          // Fixed space - split between previous and next button
-          let fixedSpaceWidth = i < trailingPaddings.count ? trailingPaddings[i] : 0
-          let halfSpace = fixedSpaceWidth / 2.0
-
-          // Add half to the previous button if it exists
-          if !currentGroupPaddings.isEmpty {
-            let lastIndex = currentGroupPaddings.count - 1
-            currentGroupPaddings[lastIndex] += halfSpace
-          }
-
-          // Store the other half for the next button
-          pendingSpacing = halfSpace
-        } else {
-          // Regular button - add to current group
-          let icon = i < trailingIcons.count ? trailingIcons[i] : ""
-          let label = i < trailingLabels.count ? trailingLabels[i] : ""
-          var padding = i < trailingPaddings.count ? trailingPaddings[i] : 0
-          let labelSize = i < trailingLabelSizes.count ? trailingLabelSizes[i] : 0.0
-          let iconSize = i < trailingIconSizes.count ? trailingIconSizes[i] : 0.0
-          let tintValue = i < trailingTints.count ? trailingTints[i] : 0
-
-          // Add any pending spacing from a previous fixedSpace
-          padding += pendingSpacing
-          pendingSpacing = 0.0
-
-          currentGroupIcons.append(icon)
-          currentGroupLabels.append(label)
-          currentGroupPaddings.append(padding)
-          currentGroupLabelSizes.append(labelSize)
-          currentGroupIconSizes.append(iconSize)
-          currentGroupIndices.append(i)
-          currentGroupTints.append(tintValue)
-          currentGroupImageAssets.append(i < trailingImageAssets.count ? trailingImageAssets[i] : "")
-
-          let badgeValue = i < trailingBadgeValues.count ? trailingBadgeValues[i] : ""
-          let badgeColor = i < trailingBadgeColors.count ? trailingBadgeColors[i] : 0
-          currentGroupBadgeValues.append(badgeValue)
-          currentGroupBadgeColors.append(badgeColor)
-        }
-      }
-
-      // Finalize any remaining group
-      finalizeCurrentGroup()
-      
+    let trailingBarItems = buildBarItems(
+      BarActions(from: args, prefix: "trailing"),
+      location: "trailing",
+      tagOffset: 2000,
+      action: #selector(trailingTapped(_:))
+    )
+    if !trailingBarItems.isEmpty {
       if middleAlignment == "trailing" && navigationItem.rightBarButtonItems != nil {
         // Middle is positioned close to trailing, append trailing after middle
         navigationItem.rightBarButtonItems?.append(contentsOf: trailingBarItems)
@@ -950,8 +711,16 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         } else {
           result(FlutterError(code: "bad_args", message: "Missing badges", details: nil))
         }
+      case "setActions":
+        if let args = call.arguments as? [String: Any] {
+          self.updateActions(args)
+          result(nil)
+        } else {
+          result(FlutterError(code: "bad_args", message: "Missing actions", details: nil))
+        }
       case "setBrightness":
         if let args = call.arguments as? [String: Any], let isDark = (args["isDark"] as? NSNumber)?.boolValue {
+          self.currentIsDark = isDark
           if #available(iOS 13.0, *) {
             self.container.overrideUserInterfaceStyle = isDark ? .dark : .light
             // Update blur effect for new brightness
@@ -1206,6 +975,171 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     ])
   }
 
+  /// One side's actions, as the Dart side sends them: parallel arrays keyed
+  /// `<prefix>Icons`, `<prefix>Labels` and so on. Read the same way from the
+  /// creation params and from a later setActions call.
+  private struct BarActions {
+    var icons: [String] = []
+    var labels: [String] = []
+    var paddings: [Double] = []
+    var labelSizes: [Double] = []
+    var iconSizes: [Double] = []
+    var spacers: [String] = []
+    var tints: [Int] = []
+    var badgeValues: [String] = []
+    var badgeColors: [Int] = []
+    var imageAssets: [String] = []
+    var popupMenus: [Any?] = []
+
+    init(from args: Any?, prefix: String) {
+      guard let dict = args as? [String: Any] else { return }
+      icons = (dict["\(prefix)Icons"] as? [String]) ?? []
+      labels = (dict["\(prefix)Labels"] as? [String]) ?? []
+      paddings = (dict["\(prefix)Paddings"] as? [Double]) ?? []
+      labelSizes = (dict["\(prefix)LabelSizes"] as? [Double]) ?? []
+      iconSizes = (dict["\(prefix)IconSizes"] as? [Double]) ?? []
+      spacers = (dict["\(prefix)Spacers"] as? [String]) ?? []
+      tints = (dict["\(prefix)Tints"] as? [Int]) ?? []
+      badgeValues = (dict["\(prefix)BadgeValues"] as? [String]) ?? []
+      badgeColors = (dict["\(prefix)BadgeColors"] as? [Int]) ?? []
+      imageAssets = (dict["\(prefix)ImageAssets"] as? [String]) ?? []
+      popupMenus = (dict["\(prefix)PopupMenus"] as? [Any?]) ?? []
+    }
+  }
+
+  /// Builds one side's bar items: consecutive actions share a pill, a flexible
+  /// space splits them, and a fixed space is shared out as padding between the
+  /// buttons either side of it. Each button's tag is its action index plus
+  /// `tagOffset`, which is how a tap finds its way back to the Dart action.
+  private func buildBarItems(
+    _ actions: BarActions,
+    location: String,
+    tagOffset: Int,
+    action: Selector
+  ) -> [UIBarButtonItem] {
+    let count = max(actions.icons.count, actions.labels.count)
+    guard count > 0 else { return [] }
+
+    func at<T>(_ list: [T], _ i: Int, _ fallback: T) -> T {
+      i < list.count ? list[i] : fallback
+    }
+
+    var barItems: [UIBarButtonItem] = []
+    var groupIcons: [String] = []
+    var groupLabels: [String] = []
+    var groupPaddings: [Double] = []
+    var groupLabelSizes: [Double] = []
+    var groupIconSizes: [Double] = []
+    var groupIndices: [Int] = []
+    var groupTints: [Int] = []
+    var groupBadgeValues: [String] = []
+    var groupBadgeColors: [Int] = []
+    var groupImageAssets: [String] = []
+    var groupPopupMenus: [Any?] = []
+    var pendingSpacing: Double = 0.0  // Track spacing to add to next button
+
+    func finalizeCurrentGroup() {
+      guard !groupIcons.isEmpty || !groupLabels.isEmpty else { return }
+      let buttonGroup = createButtonGroup(
+        icons: groupIcons,
+        labels: groupLabels,
+        paddings: groupPaddings,
+        labelSizes: groupLabelSizes,
+        iconSizes: groupIconSizes,
+        imageAssets: groupImageAssets,
+        pillHeight: pillHeight,
+        tint: currentTint,
+        tints: groupTints,
+        badgeValues: groupBadgeValues,
+        badgeColors: groupBadgeColors,
+        isDark: currentIsDark,
+        target: self,
+        action: action,
+        popupMenus: groupPopupMenus,
+        actionIndices: groupIndices,
+        location: location
+      )
+
+      for (idx, button) in findAllButtons(in: buttonGroup).enumerated()
+      where idx < groupIndices.count {
+        button.tag = tagOffset + groupIndices[idx]
+      }
+      barItems.append(UIBarButtonItem(customView: buttonGroup))
+
+      groupIcons = []
+      groupLabels = []
+      groupPaddings = []
+      groupLabelSizes = []
+      groupIconSizes = []
+      groupIndices = []
+      groupTints = []
+      groupBadgeValues = []
+      groupBadgeColors = []
+      groupImageAssets = []
+      groupPopupMenus = []
+      pendingSpacing = 0.0
+    }
+
+    for i in 0..<count {
+      let spacerType = at(actions.spacers, i, "")
+
+      if spacerType == "flexible" {
+        finalizeCurrentGroup()
+        barItems.append(
+          UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        )
+      } else if spacerType == "fixed" {
+        // Fixed space - split between previous and next button
+        let halfSpace = at(actions.paddings, i, 0) / 2.0
+        if !groupPaddings.isEmpty {
+          groupPaddings[groupPaddings.count - 1] += halfSpace
+        }
+        pendingSpacing = halfSpace
+      } else {
+        groupIcons.append(at(actions.icons, i, ""))
+        groupLabels.append(at(actions.labels, i, ""))
+        groupPaddings.append(at(actions.paddings, i, 0) + pendingSpacing)
+        pendingSpacing = 0.0
+        groupLabelSizes.append(at(actions.labelSizes, i, 0))
+        groupIconSizes.append(at(actions.iconSizes, i, 0))
+        groupIndices.append(i)
+        groupTints.append(at(actions.tints, i, 0))
+        groupImageAssets.append(at(actions.imageAssets, i, ""))
+        groupBadgeValues.append(at(actions.badgeValues, i, ""))
+        groupBadgeColors.append(at(actions.badgeColors, i, 0))
+        groupPopupMenus.append(i < actions.popupMenus.count ? actions.popupMenus[i] : nil)
+      }
+    }
+    finalizeCurrentGroup()
+    return barItems
+  }
+
+  /// Replaces the leading and trailing buttons after creation.
+  ///
+  /// The buttons used to be built once from the creation params and never
+  /// again, so an action added later got a slot with nothing drawn in it until
+  /// something recreated the whole view (a light/dark switch did). A bar with
+  /// middle items interleaves them with the leading and trailing ones, so that
+  /// layout is left as it was built.
+  private func updateActions(_ args: [String: Any]) {
+    guard !hasMiddleItems else { return }
+    let leading = buildBarItems(
+      BarActions(from: args, prefix: "leading"),
+      location: "leading",
+      tagOffset: 0,
+      action: #selector(leadingTapped(_:))
+    )
+    let trailing = buildBarItems(
+      BarActions(from: args, prefix: "trailing"),
+      location: "trailing",
+      tagOffset: 2000,
+      action: #selector(trailingTapped(_:))
+    )
+    navigationItem.setLeftBarButtonItems(leading.isEmpty ? nil : leading, animated: false)
+    navigationItem.setRightBarButtonItems(trailing.isEmpty ? nil : trailing, animated: false)
+    container.setNeedsLayout()
+  }
+
   /// Re-applies badges to bar buttons that already exist. The bar items are
   /// built once from the platform view's creation params, so a badge that
   /// appears or changes after the first frame — an unread count arriving from
@@ -1428,6 +1362,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     target: Any?,
     action: Selector,
     popupMenus: [Any?] = [],
+    actionIndices: [Int] = [],
     location: String = ""
   ) -> UIView {
     let count = max(icons.count, labels.count)
@@ -1535,7 +1470,10 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       // Set up popup menu if available
       if i < popupMenus.count, let menuItems = popupMenus[i] as? [[String: Any]], !menuItems.isEmpty {
         if #available(iOS 14.0, *) {
-          setupButtonMenu(button: button, menuItems: menuItems, actionIndex: i, location: location)
+          // The action's index on its side of the bar, not within this pill —
+          // they differ once a spacer has split the side into several pills.
+          let actionIndex = i < actionIndices.count ? actionIndices[i] : i
+          setupButtonMenu(button: button, menuItems: menuItems, actionIndex: actionIndex, location: location)
         }
       }
       
