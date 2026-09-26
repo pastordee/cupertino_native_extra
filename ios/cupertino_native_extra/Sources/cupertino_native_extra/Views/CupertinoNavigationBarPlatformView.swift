@@ -88,6 +88,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   private var revealStart: CFTimeInterval = 0
   private var lastButtonX: CGFloat = .nan
   private var stableFrames = 0
+  private var lastMarginsAt: CFTimeInterval = -1
 
   /// Where the leading button currently sits, or nil if there isn't one.
   private func leadingButtonX() -> CGFloat? {
@@ -101,6 +102,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     revealStart = CACurrentMediaTime()
     lastButtonX = .nan
     stableFrames = 0
+    lastMarginsAt = -1
     let link = CADisplayLink(target: self, selector: #selector(revealTick))
     link.add(to: .main, forMode: .common)
     revealLink = link
@@ -109,15 +111,47 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   @objc private func revealTick() {
     let elapsed = CACurrentMediaTime() - revealStart
     guard let x = leadingButtonX() else {
-      // No leading button: nothing can jump.
-      finishReveal()
+      // No leading button: nothing can jump. One that isn't on screen YET
+      // (its first frame or two) is waited for — revealing then showed it
+      // appearing at the edge (owner, 2026-09-26).
+      if navigationItem.leftBarButtonItems?.first?.customView == nil || elapsed > 0.8 {
+        finishReveal()
+      }
       return
     }
+    // Left to itself, a bar with the collapsing large title kept its button
+    // at x 4 for ~1.5s before moving it to 24. Re-giving it its side margins
+    // — the same 16pt iOS gives a bar in a navigation controller — brings it
+    // most of the way within ~0.3s; on the very first frame it doesn't take,
+    // so it is re-applied every few frames while the button is at the edge
+    // (measured on device; owner chose this, 2026-09-26). The delay comes
+    // from the page (seen on heavy prayer pages, not light ones), not from
+    // this bar: the .editor style, clipping, fixed height and title label
+    // were each ruled out on device.
+    if x < 12 && navigationBar.alpha < 1 && elapsed - lastMarginsAt > 0.05 {
+      lastMarginsAt = elapsed
+      navigationBar.directionalLayoutMargins = .zero
+      navigationBar.directionalLayoutMargins = NSDirectionalEdgeInsets(
+        top: 0, leading: 16, bottom: 0, trailing: 16)
+      navigationBar.setNeedsLayout()
+      navigationBar.layoutIfNeeded()
+    }
+    if x != lastButtonX {
+      stableFrames = 0
+      // The large title lines up with the button, so follow it when it moves.
+      layoutLargeTitle()
+    } else {
+      stableFrames += 1
+    }
+    lastButtonX = x
     // Settled = past the first (wrong) placement and unchanged for a few
     // frames; or, whatever happens, 0.8s.
-    if x == lastButtonX { stableFrames += 1 } else { stableFrames = 0 }
-    lastButtonX = x
-    if (x >= 12 && stableFrames >= 3) || elapsed > 0.8 {
+    if navigationBar.alpha < 1 && ((x >= 12 && stableFrames >= 3) || elapsed > 0.8) {
+      navigationBar.alpha = 1
+    }
+    // Keep watching a while after the reveal: the button's last few points
+    // land late, and the large title (lined up with it) follows.
+    if navigationBar.alpha >= 1 && elapsed > 3 {
       finishReveal()
     }
   }
