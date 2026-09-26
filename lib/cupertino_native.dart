@@ -95,6 +95,7 @@ export 'components/bottom_toolbar.dart';
 export 'components/transforming_toolbar.dart';
 export 'components/search_field.dart';
 export 'components/search_bar.dart';
+export 'components/native_search_field.dart'; // Native field for search mode (iOS 26)
 export 'components/search_config.dart'; // Search configuration
 export 'components/native_search_controller.dart'; // Native fullscreen search
 export 'components/ios26_native_search_tab_bar.dart'; // iOS 26+ native tab bar (Option B)

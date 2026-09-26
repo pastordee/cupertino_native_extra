@@ -58,6 +58,9 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
 
     let searchBarFactory = CupertinoSearchBarPlatformViewFactory(messenger: registrar.messenger())
     registrar.register(searchBarFactory, withId: "CupertinoNativeSearchBar")
+
+    let searchFieldFactory = CupertinoSearchFieldFactory(messenger: registrar.messenger())
+    registrar.register(searchFieldFactory, withId: "CupertinoNativeSearchField")
     
     // Register native sheet header view for UiKitView integration
     let sheetHeaderFactory = CupertinoNativeSheetHeaderViewFactory(messenger: registrar.messenger())
