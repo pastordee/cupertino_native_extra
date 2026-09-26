@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cupertino_ui/cupertino_ui.dart';
@@ -345,6 +346,7 @@ class CNNavigationBar extends StatefulWidget {
     this.segmentedControlSelectedColor,
     this.segmentedControlLabelColor,
     this.segmentedControlSelectedLabelColor,
+    this.largeTitleScrollController,
   }) : searchConfig = null,
        scrollableContent = null,
        _isSearchEnabled = false,
@@ -389,6 +391,7 @@ class CNNavigationBar extends StatefulWidget {
     this.segmentedControlLabelColor,
     this.segmentedControlSelectedLabelColor,
   }) : scrollableContent = null,
+       largeTitleScrollController = null,
        _isSearchEnabled = true,
        _isScrollable = false;
 
@@ -436,6 +439,7 @@ class CNNavigationBar extends StatefulWidget {
     this.segmentedControlLabelColor,
     this.segmentedControlSelectedLabelColor,
   }) : searchConfig = null,
+       largeTitleScrollController = null,
        _isSearchEnabled = false,
        _isScrollable = true;
 
@@ -504,6 +508,12 @@ class CNNavigationBar extends StatefulWidget {
   /// If null, falls back to [segmentedControlLabelColor] or the system default.
   final Color? segmentedControlSelectedLabelColor;
 
+  /// When set, [title] is shown as an iOS 26 collapsing large title: large,
+  /// under the bar, sliding up into it (leading-aligned) as this scroll
+  /// controller's offset grows. The bar grows by the large-title strip and
+  /// shrinks back as it collapses.
+  final ScrollController? largeTitleScrollController;
+
   /// Search configuration (only for search-enabled navigation bar).
   final CNSearchConfig? searchConfig;
 
@@ -547,9 +557,37 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
   Color? get _effectiveTint =>
       widget.tint ?? CupertinoTheme.of(context).primaryColor;
 
+  /// Height of the strip under the bar that holds the large title; mirrors
+  /// the native side's largeTitleArea.
+  static const double _kLargeTitleArea = 52;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.largeTitleScrollController?.addListener(_onLargeTitleScroll);
+  }
+
+  double get _largeTitleOffset {
+    final ScrollController? c = widget.largeTitleScrollController;
+    return c != null && c.positions.length == 1 ? c.offset : 0;
+  }
+
+  void _onLargeTitleScroll() {
+    _channel?.invokeMethod('setLargeTitleOffset', {
+      'offset': _largeTitleOffset,
+    });
+    // The bar's height follows the offset (see build).
+    if (mounted) setState(() {});
+  }
+
   @override
   void didUpdateWidget(covariant CNNavigationBar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.largeTitleScrollController !=
+        widget.largeTitleScrollController) {
+      oldWidget.largeTitleScrollController?.removeListener(_onLargeTitleScroll);
+      widget.largeTitleScrollController?.addListener(_onLargeTitleScroll);
+    }
     _syncPropsToNativeIfNeeded();
   }
 
@@ -562,6 +600,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
 
   @override
   void dispose() {
+    widget.largeTitleScrollController?.removeListener(_onLargeTitleScroll);
     _channel?.setMethodCallHandler(null);
     super.dispose();
   }
@@ -613,6 +652,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       'titleClickable': widget.onTitlePressed != null && !hasSegmentedControl,
       ..._actionParams(),
       'largeTitle': widget.largeTitle,
+      'collapsingLargeTitle': widget.largeTitleScrollController != null,
       'transparent': widget.transparent,
       'isDark': _isDark,
       'style': encodeStyle(context, tint: _effectiveTint),
@@ -666,7 +706,13 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
             onPlatformViewCreated: _onCreated,
           );
 
-    final h = widget.height ?? _intrinsicHeight ?? 44.0;
+    double h = widget.height ?? _intrinsicHeight ?? 44.0;
+    if (widget.largeTitleScrollController != null) {
+      // Plus whatever of the large-title strip is still showing. A pull-down
+      // doesn't grow it: the title holds still and the page stretches below.
+      final double o = _largeTitleOffset;
+      h += _kLargeTitleArea - o.clamp(0.0, _kLargeTitleArea);
+    }
 
     // Native platform view handles segmented control rendering in title view
     return SizedBox(height: h, child: platformView);
@@ -681,6 +727,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
     _lastIsDark = _isDark;
     _lastTransparent = widget.transparent;
     _lastActionSignature = _actionSignature(_actionParams());
+    if (widget.largeTitleScrollController != null) _onLargeTitleScroll();
     _requestIntrinsicSize();
   }
 

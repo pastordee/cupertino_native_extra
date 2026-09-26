@@ -11,9 +11,30 @@ import ObjectiveC
 final class LayoutReportingView: UIView {
   var onLayout: (() -> Void)?
 
+  /// Called when the view lands in a window, when its safe area changes, and
+  /// once more after a route's slide-in has settled.
+  var onPlacedOnScreen: (() -> Void)?
+
   override func layoutSubviews() {
     super.layoutSubviews()
     onLayout?()
+  }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    guard window != nil else { return }
+    onPlacedOnScreen?()
+    // A pushed page is attached while it is still sliding in; lay out again
+    // once it has arrived.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
+      guard let self = self, self.window != nil else { return }
+      self.onPlacedOnScreen?()
+    }
+  }
+
+  override func safeAreaInsetsDidChange() {
+    super.safeAreaInsetsDidChange()
+    if window != nil { onPlacedOnScreen?() }
   }
 }
 
@@ -51,6 +72,61 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   private var currentIsDark: Bool = false
   private var hasMiddleItems: Bool = false
   private let registrar: FlutterPluginRegistrar
+
+  /// Collapsing large title (iOS 26 style): a label in the system large-title
+  /// font in a strip under the bar, moved and faded by the Flutter scroll
+  /// offset, while a leading small title fades into the bar. UIKit's own
+  /// large-title machinery won't follow a scroll view it can't see (it snaps,
+  /// and faking a drag leaves the title faded), so this draws the same thing.
+  /// Approved on the event page, 2026-09-26.
+  private var collapsingTitle = false
+  static let largeTitleArea: CGFloat = 52
+  private let largeTitleLabel = UILabel()
+  private let smallTitleLabel = UILabel()
+  private var largeTitleOffset: CGFloat = 0
+  private var revealLink: CADisplayLink?
+  private var revealStart: CFTimeInterval = 0
+  private var lastButtonX: CGFloat = .nan
+  private var stableFrames = 0
+
+  /// Where the leading button currently sits, or nil if there isn't one.
+  private func leadingButtonX() -> CGFloat? {
+    guard let v = navigationItem.leftBarButtonItems?.first?.customView,
+          v.window != nil else { return nil }
+    return v.convert(v.bounds, to: container).minX
+  }
+
+  private func startRevealWatch() {
+    guard navigationBar.alpha < 1, revealLink == nil, container.window != nil else { return }
+    revealStart = CACurrentMediaTime()
+    lastButtonX = .nan
+    stableFrames = 0
+    let link = CADisplayLink(target: self, selector: #selector(revealTick))
+    link.add(to: .main, forMode: .common)
+    revealLink = link
+  }
+
+  @objc private func revealTick() {
+    let elapsed = CACurrentMediaTime() - revealStart
+    guard let x = leadingButtonX() else {
+      // No leading button: nothing can jump.
+      finishReveal()
+      return
+    }
+    // Settled = past the first (wrong) placement and unchanged for a few
+    // frames; or, whatever happens, 0.8s.
+    if x == lastButtonX { stableFrames += 1 } else { stableFrames = 0 }
+    lastButtonX = x
+    if (x >= 12 && stableFrames >= 3) || elapsed > 0.8 {
+      finishReveal()
+    }
+  }
+
+  private func finishReveal() {
+    revealLink?.invalidate()
+    revealLink = nil
+    navigationBar.alpha = 1
+  }
 
   init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger, registrar: FlutterPluginRegistrar) {
     self.registrar = registrar
@@ -91,6 +167,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       title = (dict["title"] as? String) ?? ""
       titleSize = (dict["titleSize"] as? Double) ?? 0
       titleClickable = (dict["titleClickable"] as? Bool) ?? false
+      collapsingTitle = (dict["collapsingLargeTitle"] as? Bool) ?? false
       leadingBadgeValues = (dict["leadingBadgeValues"] as? [String]) ?? []
       leadingBadgeColors = (dict["leadingBadgeColors"] as? [Int]) ?? []
       middleIcons = (dict["middleIcons"] as? [String]) ?? []
@@ -584,6 +661,33 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     currentTint = tint
     isTransparent = transparent
 
+    if collapsingTitle {
+      // Title on the leading side when collapsed, as in Apple's iOS 26 apps.
+      if #available(iOS 16.0, *) {
+        navigationItem.style = .editor
+      }
+      smallTitleLabel.text = title
+      smallTitleLabel.font = titleSize > 0
+        ? .systemFont(ofSize: CGFloat(titleSize), weight: .semibold)
+        : .systemFont(ofSize: 17, weight: .semibold)
+      smallTitleLabel.textColor = .label
+      smallTitleLabel.alpha = 0
+      navigationItem.title = nil
+      navigationItem.titleView = smallTitleLabel
+
+      largeTitleLabel.text = title
+      let base = UIFont.preferredFont(forTextStyle: .largeTitle)
+      largeTitleLabel.font = UIFont(
+        descriptor: base.fontDescriptor.withSymbolicTraits(.traitBold) ?? base.fontDescriptor,
+        size: base.pointSize)
+      largeTitleLabel.textColor = .label
+      largeTitleLabel.adjustsFontSizeToFitWidth = true
+      largeTitleLabel.minimumScaleFactor = 0.6
+      container.clipsToBounds = true
+      // Under the bar, so it slides beneath the glass.
+      container.addSubview(largeTitleLabel)
+    }
+
     if let tintColor = tint {
       navigationBar.tintColor = tintColor
     }
@@ -616,9 +720,21 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       // whole bar while the scroll logic can never see anything to scroll.
       self.navigationBar.layoutIfNeeded()
       self.updateSegmentedTitleWidth()
+      self.layoutLargeTitle()
     }
     container.addSubview(navigationBar)
 
+    // iOS 26 places a bar button twice: first ~20pt too far left, then —
+    // about half a second later, once the separate glass-platter layer has
+    // caught up — where it belongs (measured 2026-09-26: x 4 → 24). A bar in a
+    // UINavigationController does that off screen during the push; this one is
+    // created as its page appears, so the jump showed. Keep the bar hidden
+    // until its leading button has stopped moving, then show it — once, in
+    // place. Capped so a bar is never hidden for long.
+    navigationBar.alpha = 0
+    (container as? LayoutReportingView)?.onPlacedOnScreen = { [weak self] in
+      self?.startRevealWatch()
+    }
     // A UINavigationBar standing on its own — not inside a
     // UINavigationController — was reported to get none of the system's side
     // margins, and a glass bar was inset 16pt to put its buttons back where
@@ -632,8 +748,16 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       navigationBar.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: sideInset),
       navigationBar.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -sideInset),
       navigationBar.topAnchor.constraint(equalTo: container.topAnchor),
-      navigationBar.bottomAnchor.constraint(equalTo: container.bottomAnchor),
     ])
+    if collapsingTitle {
+      // The container also holds the large-title strip below the bar, so the
+      // bar keeps its own height instead of stretching to fill it.
+      let barHeight = navigationBar.sizeThatFits(
+        CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).height
+      navigationBar.heightAnchor.constraint(equalToConstant: barHeight).isActive = true
+    } else {
+      navigationBar.bottomAnchor.constraint(equalTo: container.bottomAnchor).isActive = true
+    }
 
     channel.setMethodCallHandler { [weak self] call, result in
       guard let self = self else { result(nil); return }
@@ -643,7 +767,14 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         result(["height": Double(height)])
       case "setTitle":
         if let args = call.arguments as? [String: Any], let title = args["title"] as? String {
-          self.navigationItem.title = title
+          if self.collapsingTitle {
+            self.largeTitleLabel.text = title
+            self.smallTitleLabel.text = title
+            self.smallTitleLabel.sizeToFit()
+            self.layoutLargeTitle()
+          } else {
+            self.navigationItem.title = title
+          }
           self.currentTitle = title
           result(nil)
         } else {
@@ -699,6 +830,11 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         } else {
           result(FlutterError(code: "bad_args", message: "Missing labels", details: nil))
         }
+      case "setLargeTitleOffset":
+        let offset = ((call.arguments as? [String: Any])?["offset"] as? NSNumber)?.doubleValue ?? 0
+        self.largeTitleOffset = CGFloat(offset)
+        self.layoutLargeTitle()
+        result(nil)
       case "setBadges":
         if let args = call.arguments as? [String: Any] {
           self.updateBadges(
@@ -740,6 +876,37 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+
+  /// Places the large title for the current scroll offset: it moves up with
+  /// the page, fading as it passes under the bar, and the small title fades in
+  /// over the second half of the travel.
+  private func layoutLargeTitle() {
+    guard collapsingTitle else { return }
+    let bar = navigationBar.frame.maxY
+    guard bar > 0 else { return }
+    let area = Self.largeTitleArea
+    let offset = largeTitleOffset
+    let travel = min(max(offset, 0), area)
+    // Line the title up with the leading button's left edge, as Apple's apps
+    // do (owner, 2026-09-26: it started further left than the back button).
+    var margin: CGFloat = 20
+    if let leading = navigationItem.leftBarButtonItems?.first?.customView,
+       leading.window != nil {
+      let x = leading.convert(leading.bounds, to: container).minX
+      if x > 0 { margin = x }
+    }
+    let height = largeTitleLabel.font.lineHeight
+    largeTitleLabel.frame = CGRect(
+      x: margin,
+      // Held in place on a pull-down (negative offset): the bar is a fixed
+      // height, so a title following the stretch was cut off.
+      y: bar + (area - height) / 2 - max(offset, 0),
+      width: container.bounds.width - margin * 2,
+      height: height)
+    largeTitleLabel.alpha = 1 - min(1, travel / (area * 0.7))
+    smallTitleLabel.sizeToFit()
+    smallTitleLabel.alpha = max(0, min(1, (travel - area * 0.5) / (area * 0.5)))
   }
 
   /// Narrows the scrolling segmented-control title to the space left between
