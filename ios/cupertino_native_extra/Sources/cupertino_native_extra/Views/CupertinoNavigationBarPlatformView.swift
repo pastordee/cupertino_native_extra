@@ -48,6 +48,12 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   private let navigationBar: UINavigationBar
   private let navigationItem: UINavigationItem
   private var currentTitle: String = ""
+  /// The tappable title, when there is one. It lives in the titleView, which
+  /// `navigationItem.title` doesn't reach, so setTitle updates it here — that
+  /// is what lets a bar with a tappable title (the Bible reader's) change its
+  /// title in place instead of being rebuilt.
+  private var clickableTitleButton: UIButton?
+  private var clickableTitleAttributes: [NSAttributedString.Key: Any] = [:]
   /// Width constraint on the scrolling segmented-control title, and the width
   /// that control would take if nothing constrained it.
   private var segmentedTitleWidthConstraint: NSLayoutConstraint?
@@ -685,9 +691,12 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
         
         navigationItem.titleView = titleButton
         navigationItem.title = nil
+        clickableTitleButton = titleButton
+        clickableTitleAttributes = titleAttributes
       } else {
         navigationItem.title = title
         navigationItem.titleView = nil
+        clickableTitleButton = nil
       }
     }
     
@@ -806,6 +815,12 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
             self.smallTitleLabel.text = title
             self.smallTitleLabel.sizeToFit()
             self.layoutLargeTitle()
+          } else if let button = self.clickableTitleButton,
+                    self.navigationItem.titleView === button {
+            button.setAttributedTitle(
+              NSAttributedString(string: title, attributes: self.clickableTitleAttributes),
+              for: .normal)
+            button.sizeToFit()
           } else {
             self.navigationItem.title = title
           }
