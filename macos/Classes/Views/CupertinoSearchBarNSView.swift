@@ -1,7 +1,7 @@
 import Cocoa
 import FlutterMacOS
 
-class CupertinoSearchBarNSView: NSView, FlutterPlatformView, NSSearchFieldDelegate {
+class CupertinoSearchBarNSView: NSView, NSSearchFieldDelegate {
     private let channel: FlutterMethodChannel
     private let searchField: NSSearchField
     

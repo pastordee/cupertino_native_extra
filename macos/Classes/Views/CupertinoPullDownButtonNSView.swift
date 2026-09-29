@@ -265,7 +265,7 @@ class CupertinoPullDownButtonNSView: NSView {
   }
 }
 
-extension NSImage {
+private extension NSImage {
   func tinted(with color: NSColor) -> NSImage {
     let image = self.copy() as! NSImage
     image.lockFocus()

@@ -10,9 +10,9 @@ class CupertinoNativePopupButtonFactory: NSObject, FlutterPlatformViewFactory {
         super.init()
     }
     
-    func create(withFrame frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?) -> NSFlutterPlatformView {
+    func create(withViewIdentifier viewId: Int64, arguments args: Any?) -> NSView {
         return CupertinoNativePopupButtonView(
-            frame: frame,
+            frame: .zero,
             viewId: viewId,
             args: args,
             messenger: messenger
@@ -25,7 +25,8 @@ class CupertinoNativePopupButtonFactory: NSObject, FlutterPlatformViewFactory {
 }
 
 @available(macOS 11.0, *)
-class CupertinoNativePopupButtonView: NSObject, NSFlutterPlatformView {
+// On macOS the platform view IS the NSView (no FlutterPlatformView wrapper).
+class CupertinoNativePopupButtonView: NSView {
     private let containerView: NSView
     private let popUpButton: NSPopUpButton
     private let channel: FlutterMethodChannel
@@ -98,8 +99,10 @@ class CupertinoNativePopupButtonView: NSObject, NSFlutterPlatformView {
             binaryMessenger: messenger!
         )
         
-        super.init()
+        super.init(frame: frame)
         
+        containerView.autoresizingMask = [.width, .height]
+        addSubview(containerView)
         containerView.addSubview(popUpButton)
         
         // Apply styling
@@ -172,8 +175,8 @@ class CupertinoNativePopupButtonView: NSObject, NSFlutterPlatformView {
         }
     }
     
-    func view() -> NSView {
-        return containerView
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
     private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {

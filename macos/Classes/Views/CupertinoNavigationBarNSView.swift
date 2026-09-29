@@ -1,289 +1,475 @@
 import FlutterMacOS
 import Cocoa
-import ObjectiveC
 
-// Custom NSButton with press animation effect
-class AnimatedButton: NSButton {
-  override func mouseDown(with event: NSEvent) {
-    NSAnimationContext.runAnimationGroup({ context in
-      context.duration = 0.1
-      context.allowsImplicitAnimation = true
-      self.alphaValue = 0.6
-      self.layer?.transform = CATransform3DMakeScale(0.95, 0.95, 1.0)
-    })
-    super.mouseDown(with: event)
+// The macOS counterpart of the iOS CNNavigationBar platform view.
+//
+// It reads the same creation params and answers the same channel methods as
+// the iOS bar (setActions, setSegments, setBadges, setTitle, setStyle,
+// setBrightness), and reports taps with the same indices, so the Dart widget
+// needs no macOS branch. The look is a Mac toolbar rather than an iOS bar:
+// icon buttons grouped in capsules, a hover highlight, menus as NSMenus, and
+// the segmented control centred.
+
+// MARK: - Params
+
+/// One side's actions, read from the parallel `<side>Icons`, `<side>Labels`…
+/// lists the Dart side sends. Index i here is index i of the Dart action
+/// list, spacers included, which is what taps report back.
+private struct BarActions {
+  var icons: [String] = []
+  var labels: [String] = []
+  var paddings: [Double] = []
+  var labelSizes: [Double] = []
+  var iconSizes: [Double] = []
+  var spacers: [String] = []
+  var tints: [Int] = []
+  var badgeValues: [String] = []
+  var badgeColors: [Int] = []
+  var imageAssets: [String] = []
+  var popupMenus: [[[String: Any]]?] = []
+
+  init(from d: [String: Any], prefix p: String) {
+    icons = (d["\(p)Icons"] as? [String]) ?? []
+    labels = (d["\(p)Labels"] as? [String]) ?? []
+    paddings = Self.doubles(d["\(p)Paddings"])
+    labelSizes = Self.doubles(d["\(p)LabelSizes"])
+    iconSizes = Self.doubles(d["\(p)IconSizes"])
+    spacers = (d["\(p)Spacers"] as? [String]) ?? []
+    tints = ((d["\(p)Tints"] as? [NSNumber]) ?? []).map { $0.intValue }
+    badgeValues = (d["\(p)BadgeValues"] as? [String]) ?? []
+    badgeColors = ((d["\(p)BadgeColors"] as? [NSNumber]) ?? []).map { $0.intValue }
+    imageAssets = (d["\(p)ImageAssets"] as? [String]) ?? []
+    popupMenus = ((d["\(p)PopupMenus"] as? [Any]) ?? []).map { $0 as? [[String: Any]] }
   }
-  
-  override func mouseUp(with event: NSEvent) {
-    NSAnimationContext.runAnimationGroup({ context in
-      context.duration = 0.15
-      context.allowsImplicitAnimation = true
-      self.alphaValue = 1.0
-      self.layer?.transform = CATransform3DIdentity
-    })
-    super.mouseUp(with: event)
+
+  var count: Int { max(icons.count, labels.count, spacers.count) }
+
+  func spacer(_ i: Int) -> String { i < spacers.count ? spacers[i] : "" }
+  func icon(_ i: Int) -> String { i < icons.count ? icons[i] : "" }
+  func label(_ i: Int) -> String { i < labels.count ? labels[i] : "" }
+  func asset(_ i: Int) -> String { i < imageAssets.count ? imageAssets[i] : "" }
+  func padding(_ i: Int) -> CGFloat { i < paddings.count ? CGFloat(paddings[i]) : 0 }
+  func labelSize(_ i: Int) -> CGFloat { i < labelSizes.count ? CGFloat(labelSizes[i]) : 0 }
+  func iconSize(_ i: Int) -> CGFloat { i < iconSizes.count ? CGFloat(iconSizes[i]) : 0 }
+  func tint(_ i: Int) -> Int { i < tints.count ? tints[i] : 0 }
+  func menu(_ i: Int) -> [[String: Any]]? { i < popupMenus.count ? popupMenus[i] : nil }
+  func badge(_ i: Int) -> String { i < badgeValues.count ? badgeValues[i] : "" }
+  func badgeColor(_ i: Int) -> Int { i < badgeColors.count ? badgeColors[i] : 0 }
+
+  private static func doubles(_ v: Any?) -> [Double] {
+    ((v as? [NSNumber]) ?? []).map { $0.doubleValue }
   }
 }
 
+private func colorFromARGB(_ argb: Int) -> NSColor {
+  let a = CGFloat((argb >> 24) & 0xFF) / 255.0
+  let r = CGFloat((argb >> 16) & 0xFF) / 255.0
+  let g = CGFloat((argb >> 8) & 0xFF) / 255.0
+  let b = CGFloat(argb & 0xFF) / 255.0
+  return NSColor(srgbRed: r, green: g, blue: b, alpha: a)
+}
+
+private func optionalColor(_ v: Any?) -> NSColor? {
+  guard let n = v as? NSNumber, n.intValue != 0 else { return nil }
+  return colorFromARGB(n.intValue)
+}
+
+// MARK: - Pieces
+
+/// A capsule behind a run of buttons, like a Mac toolbar item group. Its fill
+/// follows the view's appearance, so it is resolved in updateLayer.
+private final class NavPillView: NSView {
+  override init(frame: NSRect) {
+    super.init(frame: frame)
+    wantsLayer = true
+  }
+  required init?(coder: NSCoder) { return nil }
+  override var wantsUpdateLayer: Bool { true }
+  override func updateLayer() {
+    effectiveAppearance.performAsCurrentDrawingAppearance {
+      layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.08).cgColor
+      layer?.borderColor = NSColor.labelColor.withAlphaComponent(0.06).cgColor
+    }
+    layer?.borderWidth = 0.5
+    layer?.cornerRadius = bounds.height / 2
+  }
+  override func layout() {
+    super.layout()
+    layer?.cornerRadius = bounds.height / 2
+  }
+}
+
+/// A borderless bar button with a hover highlight and a press dip. Takes the
+/// first click even when the window isn't key, as toolbar buttons do.
+private final class NavBarButton: NSButton {
+  var menuItems: [[String: Any]]?
+  private var tracking: NSTrackingArea?
+  private var hovering = false { didSet { updateHover() } }
+  private var badgeView: NSTextField?
+
+  override init(frame: NSRect) {
+    super.init(frame: frame)
+    isBordered = false
+    bezelStyle = .regularSquare
+    setButtonType(.momentaryChange)
+    wantsLayer = true
+    layer?.cornerRadius = 14
+    focusRingType = .none
+  }
+  required init?(coder: NSCoder) { return nil }
+
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    if let t = tracking { removeTrackingArea(t) }
+    let t = NSTrackingArea(
+      rect: bounds,
+      options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+      owner: self, userInfo: nil)
+    addTrackingArea(t)
+    tracking = t
+  }
+
+  override func mouseEntered(with event: NSEvent) { hovering = true }
+  override func mouseExited(with event: NSEvent) { hovering = false }
+
+  override func mouseDown(with event: NSEvent) {
+    alphaValue = 0.55
+    super.mouseDown(with: event)  // returns once the mouse is released
+    alphaValue = 1.0
+  }
+
+  override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    updateHover()
+  }
+
+  private func updateHover() {
+    effectiveAppearance.performAsCurrentDrawingAppearance {
+      layer?.backgroundColor = hovering
+        ? NSColor.labelColor.withAlphaComponent(0.10).cgColor
+        : NSColor.clear.cgColor
+    }
+  }
+
+  override func layout() {
+    super.layout()
+    layer?.cornerRadius = min(bounds.height, bounds.width) / 2
+    layoutBadge()
+  }
+
+  /// A small count capsule on the top-right corner; empty removes it.
+  func setBadge(_ value: String, color: NSColor?) {
+    guard !value.isEmpty else {
+      badgeView?.removeFromSuperview()
+      badgeView = nil
+      return
+    }
+    let badge = badgeView ?? {
+      let b = NSTextField(labelWithString: "")
+      b.font = NSFont.systemFont(ofSize: 9, weight: .bold)
+      b.alignment = .center
+      b.textColor = .white
+      b.wantsLayer = true
+      b.layer?.masksToBounds = true
+      addSubview(b)
+      badgeView = b
+      return b
+    }()
+    badge.stringValue = value
+    badge.layer?.backgroundColor = (color ?? .systemRed).cgColor
+    layoutBadge()
+  }
+
+  private func layoutBadge() {
+    guard let b = badgeView else { return }
+    let h: CGFloat = 14
+    let w = max(h, b.intrinsicContentSize.width + 6)
+    // NSButton is flipped: y = 0 is the top edge.
+    b.frame = NSRect(x: bounds.width - w + 3, y: -2, width: w, height: h)
+    b.layer?.cornerRadius = h / 2
+  }
+}
+
+/// A capsule segmented control in the app's own colours. NSSegmentedControl
+/// can't take a track colour or per-state label colours, which the apps set
+/// on every bar, so this draws its own: a track, a thumb behind the selected
+/// segment, and a borderless button per label.
+private final class NavSegmentedControl: NSView {
+  var onChanged: ((Int) -> Void)?
+  private var buttons: [NSButton] = []
+  private let thumb = NSView()
+  private var labels: [String] = []
+  private(set) var selectedIndex = 0
+  private var widths: [CGFloat] = []
+
+  var height: CGFloat = 28
+  var labelSize: CGFloat = 13
+  var trackColor: NSColor?
+  var thumbColor: NSColor?
+  var labelColor: NSColor?
+  var selectedLabelColor: NSColor?
+
+  override var isFlipped: Bool { true }
+
+  override init(frame: NSRect) {
+    super.init(frame: frame)
+    wantsLayer = true
+    thumb.wantsLayer = true
+    addSubview(thumb)
+  }
+  required init?(coder: NSCoder) { return nil }
+
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+  func configure(labels: [String], selected: Int) {
+    self.labels = labels
+    selectedIndex = max(0, min(selected, labels.count - 1))
+    buttons.forEach { $0.removeFromSuperview() }
+    buttons = []
+    let font = NSFont.systemFont(ofSize: labelSize, weight: .medium)
+    widths = labels.map { ($0 as NSString).size(withAttributes: [.font: font]).width + 26 }
+    for (i, label) in labels.enumerated() {
+      let b = SegmentButton(frame: .zero)
+      b.title = label
+      b.tag = i
+      b.target = self
+      b.action = #selector(segmentTapped(_:))
+      addSubview(b)
+      buttons.append(b)
+    }
+    invalidateIntrinsicContentSize()
+    refreshColors()
+    needsLayout = true
+  }
+
+  func select(_ index: Int, animated: Bool) {
+    guard index >= 0, index < labels.count, index != selectedIndex else { return }
+    selectedIndex = index
+    refreshColors()
+    if animated {
+      NSAnimationContext.runAnimationGroup { ctx in
+        ctx.duration = 0.18
+        ctx.allowsImplicitAnimation = true
+        layoutThumb()
+      }
+    } else {
+      layoutThumb()
+    }
+  }
+
+  override var intrinsicContentSize: NSSize {
+    NSSize(width: widths.reduce(0, +) + 4, height: height)
+  }
+
+  override func layout() {
+    super.layout()
+    layer?.cornerRadius = bounds.height / 2
+    var x: CGFloat = 2
+    for (i, b) in buttons.enumerated() {
+      b.frame = NSRect(x: x, y: 2, width: widths[i], height: bounds.height - 4)
+      x += widths[i]
+    }
+    layoutThumb()
+  }
+
+  private func layoutThumb() {
+    guard selectedIndex < buttons.count else { thumb.isHidden = true; return }
+    thumb.isHidden = false
+    thumb.frame = buttons[selectedIndex].frame
+    thumb.layer?.cornerRadius = thumb.frame.height / 2
+  }
+
+  override func viewDidChangeEffectiveAppearance() {
+    super.viewDidChangeEffectiveAppearance()
+    refreshColors()
+  }
+
+  func refreshColors() {
+    effectiveAppearance.performAsCurrentDrawingAppearance {
+      layer?.backgroundColor =
+        (trackColor ?? NSColor.labelColor.withAlphaComponent(0.08)).cgColor
+      thumb.layer?.backgroundColor = (thumbColor ?? NSColor.controlAccentColor).cgColor
+      let font = NSFont.systemFont(ofSize: labelSize, weight: .medium)
+      let para = NSMutableParagraphStyle()
+      para.alignment = .center
+      for (i, b) in buttons.enumerated() {
+        let color = i == selectedIndex
+          ? (selectedLabelColor ?? .white)
+          : (labelColor ?? .labelColor)
+        b.attributedTitle = NSAttributedString(
+          string: labels[i],
+          attributes: [.font: font, .foregroundColor: color, .paragraphStyle: para])
+      }
+    }
+  }
+
+  @objc private func segmentTapped(_ sender: NSButton) {
+    guard sender.tag != selectedIndex else { return }
+    select(sender.tag, animated: true)
+    onChanged?(sender.tag)
+  }
+
+  private final class SegmentButton: NSButton {
+    override init(frame: NSRect) {
+      super.init(frame: frame)
+      isBordered = false
+      bezelStyle = .regularSquare
+      setButtonType(.momentaryChange)
+      focusRingType = .none
+    }
+    required init?(coder: NSCoder) { return nil }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+  }
+}
+
+// MARK: - The bar
+
 class CupertinoNavigationBarNSView: NSView {
   private let channel: FlutterMethodChannel
-  private let visualEffectView: NSVisualEffectView
-  private let titleLabel: NSTextField
-  private var leadingButtons: [NSButton] = []
-  private var middleButtons: [NSButton] = []
-  private var trailingButtons: [NSButton] = []
-  private var currentTitle: String = ""
-  private var currentTint: NSColor? = nil
-  private var isTransparent: Bool = false
   private let registrar: FlutterPluginRegistrar
+  private let background = NSVisualEffectView(frame: .zero)
+  private let leadingStack = NSStackView()
+  private let trailingStack = NSStackView()
+  private let titleLabel = NSTextField(labelWithString: "")
+  private var segmented: NavSegmentedControl?
+
+  private var leadingButtons: [Int: NavBarButton] = [:]
+  private var trailingButtons: [Int: NavBarButton] = [:]
+  private var leadingMenus: [Int: [[String: Any]]] = [:]
+  private var trailingMenus: [Int: [[String: Any]]] = [:]
+  private var lastActionArgs: [String: Any] = [:]
+
+  private var tint: NSColor?
+
+  override var isFlipped: Bool { true }
 
   init(viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger, registrar: FlutterPluginRegistrar) {
     self.registrar = registrar
-    self.channel = FlutterMethodChannel(name: "CupertinoNativeNavigationBar_\(viewId)", binaryMessenger: messenger)
-    self.visualEffectView = NSVisualEffectView(frame: .zero)
-    self.titleLabel = NSTextField(labelWithString: "")
-
-    var title: String = ""
-    var leadingIcons: [String] = []
-    var leadingLabels: [String] = []
-    var leadingPaddings: [Double] = []
-    var leadingSpacers: [String] = []
-    var leadingTints: [Int] = []
-    var leadingImageAssets: [String] = []
-    var middleIcons: [String] = []
-    var middleLabels: [String] = []
-    var middlePaddings: [Double] = []
-    var middleSpacers: [String] = []
-    var middleTints: [Int] = []
-    var trailingIcons: [String] = []
-    var trailingLabels: [String] = []
-    var trailingPaddings: [Double] = []
-    var trailingSpacers: [String] = []
-    var trailingTints: [Int] = []
-    var trailingImageAssets: [String] = []
-    var transparent: Bool = false
-    var isDark: Bool = false
-    var tint: NSColor? = nil
-    var pillHeight: Double? = nil
-    var middleAlignment: String = "center"
-
-    if let dict = args as? [String: Any] {
-      title = (dict["title"] as? String) ?? ""
-      leadingIcons = (dict["leadingIcons"] as? [String]) ?? []
-      leadingLabels = (dict["leadingLabels"] as? [String]) ?? []
-      leadingPaddings = (dict["leadingPaddings"] as? [Double]) ?? []
-      leadingSpacers = (dict["leadingSpacers"] as? [String]) ?? []
-      leadingTints = (dict["leadingTints"] as? [Int]) ?? []
-      leadingImageAssets = (dict["leadingImageAssets"] as? [String]) ?? []
-      middleIcons = (dict["middleIcons"] as? [String]) ?? []
-      middleLabels = (dict["middleLabels"] as? [String]) ?? []
-      middlePaddings = (dict["middlePaddings"] as? [Double]) ?? []
-      middleSpacers = (dict["middleSpacers"] as? [String]) ?? []
-      middleTints = (dict["middleTints"] as? [Int]) ?? []
-      trailingIcons = (dict["trailingIcons"] as? [String]) ?? []
-      trailingLabels = (dict["trailingLabels"] as? [String]) ?? []
-      trailingPaddings = (dict["trailingPaddings"] as? [Double]) ?? []
-      trailingSpacers = (dict["trailingSpacers"] as? [String]) ?? []
-      trailingTints = (dict["trailingTints"] as? [Int]) ?? []
-      trailingImageAssets = (dict["trailingImageAssets"] as? [String]) ?? []
-      pillHeight = dict["pillHeight"] as? Double
-      middleAlignment = (dict["middleAlignment"] as? String) ?? "center"
-      if let v = dict["transparent"] as? NSNumber { transparent = v.boolValue }
-      if let v = dict["isDark"] as? NSNumber { isDark = v.boolValue }
-      if let style = dict["style"] as? [String: Any], let n = style["tint"] as? NSNumber {
-        tint = Self.colorFromARGB(n.intValue)
-      }
-    }
-
+    self.channel = FlutterMethodChannel(
+      name: "CupertinoNativeNavigationBar_\(viewId)", binaryMessenger: messenger)
     super.init(frame: .zero)
 
-    wantsLayer = true
+    let d = (args as? [String: Any]) ?? [:]
+    let isDark = (d["isDark"] as? NSNumber)?.boolValue ?? false
     appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+    if let style = d["style"] as? [String: Any] { tint = optionalColor(style["tint"]) }
 
-    // Configure visual effect view for translucent blur
-    visualEffectView.translatesAutoresizingMaskIntoConstraints = false
-    if transparent {
-      // Use ultra-thin material for more visible liquid glass effect
-      visualEffectView.material = .underWindowBackground
-      visualEffectView.blendingMode = .behindWindow
-    } else {
-      visualEffectView.material = .headerView
-      visualEffectView.blendingMode = .withinWindow
-    }
-    visualEffectView.state = .active
-    addSubview(visualEffectView)
+    wantsLayer = true
+    background.translatesAutoresizingMaskIntoConstraints = false
+    background.material = .headerView
+    background.blendingMode = .withinWindow
+    background.state = .followsWindowActiveState
+    // Transparent bars let the Flutter content behind show through; the
+    // button capsules carry their own fill so they stay readable.
+    background.isHidden = (d["transparent"] as? NSNumber)?.boolValue ?? false
+    addSubview(background)
 
-    currentTitle = title
-    currentTint = tint
-    isTransparent = transparent
-
-    // Create all button groups first
-    var leadingButtonGroup: NSView?
-    var middleButtonGroup: NSView?
-    var trailingButtonGroup: NSView?
-    
-    // Leading buttons
-    if !leadingIcons.isEmpty || !leadingLabels.isEmpty {
-      leadingButtonGroup = createButtonGroup(
-        icons: leadingIcons,
-        labels: leadingLabels,
-        paddings: leadingPaddings,
-        imageAssets: leadingImageAssets,
-        pillHeight: pillHeight,
-        tint: tint,
-        tints: leadingTints,
-        target: self,
-        action: #selector(leadingTapped(_:))
-      )
-      visualEffectView.addSubview(leadingButtonGroup!)
-      
-      NSLayoutConstraint.activate([
-        leadingButtonGroup!.leadingAnchor.constraint(equalTo: visualEffectView.leadingAnchor, constant: 8),
-        leadingButtonGroup!.centerYAnchor.constraint(equalTo: visualEffectView.centerYAnchor),
-      ])
-      
-      if let stackView = leadingButtonGroup!.subviews.first(where: { $0 is NSStackView }) as? NSStackView {
-        leadingButtons = stackView.arrangedSubviews.compactMap { $0 as? NSButton }
-      }
-    }
-    
-    // Trailing buttons
-    if !trailingIcons.isEmpty || !trailingLabels.isEmpty {
-      trailingButtonGroup = createButtonGroup(
-        icons: trailingIcons,
-        labels: trailingLabels,
-        paddings: trailingPaddings,
-        imageAssets: trailingImageAssets,
-        pillHeight: pillHeight,
-        tint: tint,
-        tints: trailingTints,
-        target: self,
-        action: #selector(trailingTapped(_:))
-      )
-      visualEffectView.addSubview(trailingButtonGroup!)
-      
-      NSLayoutConstraint.activate([
-        trailingButtonGroup!.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor, constant: -8),
-        trailingButtonGroup!.centerYAnchor.constraint(equalTo: visualEffectView.centerYAnchor),
-      ])
-      
-      if let stackView = trailingButtonGroup!.subviews.first(where: { $0 is NSStackView }) as? NSStackView {
-        trailingButtons = stackView.arrangedSubviews.compactMap { $0 as? NSButton }
-      }
+    for s in [leadingStack, trailingStack] {
+      s.orientation = .horizontal
+      s.spacing = 8
+      s.alignment = .centerY
+      s.translatesAutoresizingMaskIntoConstraints = false
+      s.setHuggingPriority(.required, for: .horizontal)
+      s.setContentCompressionResistancePriority(.required, for: .horizontal)
+      addSubview(s)
     }
 
-    // Title label or middle button group (mutually exclusive)
-    if !middleIcons.isEmpty || !middleLabels.isEmpty {
-      // Middle button group with alignment control
-      middleButtonGroup = createButtonGroup(
-        icons: middleIcons,
-        labels: middleLabels,
-        paddings: middlePaddings,
-        pillHeight: pillHeight,
-        tint: tint,
-        tints: middleTints,
-        target: self,
-        action: #selector(middleTapped(_:))
-      )
-      visualEffectView.addSubview(middleButtonGroup!)
-      
-      let hasLeading = leadingButtonGroup != nil
-      let hasTrailing = trailingButtonGroup != nil
-      
-      // Apply alignment constraints based on middleAlignment parameter
-      if middleAlignment == "leading" && hasLeading {
-        // Position right after leading buttons (only if leading exists)
-        NSLayoutConstraint.activate([
-          middleButtonGroup!.leadingAnchor.constraint(equalTo: leadingButtonGroup!.trailingAnchor, constant: 8),
-          middleButtonGroup!.centerYAnchor.constraint(equalTo: visualEffectView.centerYAnchor),
-        ])
-      } else if middleAlignment == "trailing" && hasTrailing {
-        // Position right before trailing buttons (only if trailing exists)
-        NSLayoutConstraint.activate([
-          middleButtonGroup!.trailingAnchor.constraint(equalTo: trailingButtonGroup!.leadingAnchor, constant: -8),
-          middleButtonGroup!.centerYAnchor.constraint(equalTo: visualEffectView.centerYAnchor),
-        ])
-      } else {
-        // Center alignment (default)
-        // Also use center if alignment is leading/trailing but no leading/trailing exists
-        NSLayoutConstraint.activate([
-          middleButtonGroup!.centerXAnchor.constraint(equalTo: visualEffectView.centerXAnchor),
-          middleButtonGroup!.centerYAnchor.constraint(equalTo: visualEffectView.centerYAnchor),
-        ])
-      }
-      
-      if let stackView = middleButtonGroup!.subviews.first(where: { $0 is NSStackView }) as? NSStackView {
-        middleButtons = stackView.arrangedSubviews.compactMap { $0 as? NSButton }
-      }
-    } else {
-      // Use title label
-      titleLabel.translatesAutoresizingMaskIntoConstraints = false
-      titleLabel.stringValue = title
-      titleLabel.isEditable = false
-      titleLabel.isBordered = false
-      titleLabel.backgroundColor = .clear
-      titleLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
-      titleLabel.alignment = .center
-      if let tintColor = tint {
-        titleLabel.textColor = tintColor
-      }
-      visualEffectView.addSubview(titleLabel)
-    }
-
-    // Layout constraints
     NSLayoutConstraint.activate([
-      visualEffectView.leadingAnchor.constraint(equalTo: leadingAnchor),
-      visualEffectView.trailingAnchor.constraint(equalTo: trailingAnchor),
-      visualEffectView.topAnchor.constraint(equalTo: topAnchor),
-      visualEffectView.bottomAnchor.constraint(equalTo: bottomAnchor),
-      
-      titleLabel.centerXAnchor.constraint(equalTo: visualEffectView.centerXAnchor),
-      titleLabel.centerYAnchor.constraint(equalTo: visualEffectView.centerYAnchor),
+      background.leadingAnchor.constraint(equalTo: leadingAnchor),
+      background.trailingAnchor.constraint(equalTo: trailingAnchor),
+      background.topAnchor.constraint(equalTo: topAnchor),
+      background.bottomAnchor.constraint(equalTo: bottomAnchor),
+      leadingStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+      leadingStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+      trailingStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+      trailingStack.centerYAnchor.constraint(equalTo: centerYAnchor),
     ])
+
+    let middle = BarActions(from: d, prefix: "middle")
+    let segLabels = (d["segmentedControlLabels"] as? [String]) ?? []
+    let hasSegments =
+      ((d["hasSegmentedControl"] as? NSNumber)?.boolValue ?? false) && !segLabels.isEmpty
+
+    if middle.count > 0 {
+      let group = buildSide(middle, action: #selector(middleTapped(_:))).0
+      placeCentered(group)
+    } else if hasSegments {
+      let seg = NavSegmentedControl(frame: .zero)
+      seg.height = CGFloat((d["segmentedControlHeight"] as? NSNumber)?.doubleValue ?? 28)
+      let ls = (d["segmentedControlLabelSize"] as? NSNumber)?.doubleValue ?? 0
+      if ls > 0 { seg.labelSize = CGFloat(ls) }
+      seg.trackColor = optionalColor(d["segmentedControlTint"])
+      seg.thumbColor = optionalColor(d["segmentedControlSelectedColor"])
+      seg.labelColor = optionalColor(d["segmentedControlLabelColor"])
+      seg.selectedLabelColor = optionalColor(d["segmentedControlSelectedLabelColor"])
+      seg.configure(
+        labels: segLabels,
+        selected: (d["segmentedControlSelectedIndex"] as? NSNumber)?.intValue ?? 0)
+      seg.onChanged = { [weak self] i in
+        self?.channel.invokeMethod("segmentedControlChanged", arguments: ["selectedIndex": i])
+      }
+      segmented = seg
+      placeCentered(seg)
+    } else {
+      titleLabel.stringValue = (d["title"] as? String) ?? ""
+      let size = (d["titleSize"] as? NSNumber)?.doubleValue ?? 0
+      titleLabel.font = NSFont.systemFont(ofSize: size > 0 ? CGFloat(size) : 15, weight: .semibold)
+      titleLabel.textColor = .labelColor
+      titleLabel.lineBreakMode = .byTruncatingTail
+      titleLabel.alignment = .center
+      if (d["titleClickable"] as? NSNumber)?.boolValue ?? false {
+        titleLabel.addGestureRecognizer(
+          NSClickGestureRecognizer(target: self, action: #selector(titleTapped)))
+      }
+      placeCentered(titleLabel)
+    }
+
+    applyActions(d)
 
     channel.setMethodCallHandler { [weak self] call, result in
       guard let self = self else { result(nil); return }
+      let args = call.arguments as? [String: Any]
       switch call.method {
       case "getIntrinsicSize":
-        result(["height": 52.0]) // Standard macOS toolbar height
+        result(["height": 52.0])
       case "setTitle":
-        if let args = call.arguments as? [String: Any], let title = args["title"] as? String {
-          self.titleLabel.stringValue = title
-          self.currentTitle = title
-          result(nil)
-        } else {
-          result(FlutterError(code: "bad_args", message: "Missing title", details: nil))
-        }
+        self.titleLabel.stringValue = (args?["title"] as? String) ?? ""
+        result(nil)
       case "setStyle":
-        if let args = call.arguments as? [String: Any] {
-          if let n = args["tint"] as? NSNumber {
-            let tintColor = Self.colorFromARGB(n.intValue)
-            self.titleLabel.textColor = tintColor
-            self.leadingButtons.forEach { $0.contentTintColor = tintColor }
-            self.trailingButtons.forEach { $0.contentTintColor = tintColor }
-            self.currentTint = tintColor
+        if let args = args {
+          if let t = optionalColor(args["tint"]) {
+            self.tint = t
+            self.applyActions(self.lastActionArgs)
           }
           if let t = args["transparent"] as? NSNumber {
-            self.isTransparent = t.boolValue
-            if self.isTransparent {
-              self.visualEffectView.material = .clear
-              self.visualEffectView.blendingMode = .behindWindow
-            } else {
-              self.visualEffectView.material = .headerView
-              self.visualEffectView.blendingMode = .withinWindow
-            }
+            self.background.isHidden = t.boolValue
           }
-          result(nil)
-        } else {
-          result(FlutterError(code: "bad_args", message: "Missing style", details: nil))
         }
+        result(nil)
+      case "setSegments":
+        if let labels = args?["labels"] as? [String] {
+          self.segmented?.configure(
+            labels: labels,
+            selected: (args?["selectedIndex"] as? NSNumber)?.intValue ?? 0)
+        }
+        result(nil)
+      case "setActions":
+        if let args = args { self.applyActions(args) }
+        result(nil)
+      case "setBadges":
+        if let args = args { self.applyBadges(args) }
+        result(nil)
+      case "setLargeTitleOffset":
+        // No large titles on the Mac: the title stays in the bar.
+        result(nil)
       case "setBrightness":
-        if let args = call.arguments as? [String: Any], let isDark = (args["isDark"] as? NSNumber)?.boolValue {
-          self.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
-          result(nil)
-        } else {
-          result(FlutterError(code: "bad_args", message: "Missing isDark", details: nil))
+        if let dark = (args?["isDark"] as? NSNumber)?.boolValue {
+          self.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+          self.segmented?.refreshColors()
         }
+        result(nil)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -292,193 +478,244 @@ class CupertinoNavigationBarNSView: NSView {
 
   required init?(coder: NSCoder) { return nil }
 
-  @objc private func leadingTapped(_ sender: NSButton) {
-    channel.invokeMethod("leadingTapped", arguments: ["index": sender.tag])
+  /// Centres [view] in the bar but never lets it run under either side.
+  private func placeCentered(_ view: NSView) {
+    view.translatesAutoresizingMaskIntoConstraints = false
+    addSubview(view)
+    let centre = view.centerXAnchor.constraint(equalTo: centerXAnchor)
+    centre.priority = .defaultHigh
+    NSLayoutConstraint.activate([
+      centre,
+      view.centerYAnchor.constraint(equalTo: centerYAnchor),
+      view.leadingAnchor.constraint(
+        greaterThanOrEqualTo: leadingStack.trailingAnchor, constant: 12),
+      view.trailingAnchor.constraint(
+        lessThanOrEqualTo: trailingStack.leadingAnchor, constant: -12),
+    ])
+    view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
   }
 
-  @objc private func middleTapped(_ sender: NSButton) {
+  // MARK: Actions
+
+  /// (Re)builds both sides from the `<side>…` params — at creation and on
+  /// every setActions, so actions that change after the first frame show up.
+  private func applyActions(_ args: [String: Any]) {
+    lastActionArgs = args
+    let leading = BarActions(from: args, prefix: "leading")
+    let trailing = BarActions(from: args, prefix: "trailing")
+
+    leadingStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+    trailingStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+
+    let l = buildSide(leading, action: #selector(leadingTapped(_:)))
+    leadingButtons = l.1
+    leadingMenus = menus(of: leading)
+    leadingStack.addArrangedSubview(l.0)
+
+    let t = buildSide(trailing, action: #selector(trailingTapped(_:)))
+    trailingButtons = t.1
+    trailingMenus = menus(of: trailing)
+    trailingStack.addArrangedSubview(t.0)
+  }
+
+  private func menus(of actions: BarActions) -> [Int: [[String: Any]]] {
+    var out: [Int: [[String: Any]]] = [:]
+    for i in 0..<actions.count {
+      if let m = actions.menu(i), !m.isEmpty { out[i] = m }
+    }
+    return out
+  }
+
+  /// One side: runs of buttons in capsules, split by spacers. Button tags are
+  /// the Dart action indices.
+  private func buildSide(_ actions: BarActions, action: Selector) -> (NSView, [Int: NavBarButton]) {
+    let row = NSStackView()
+    row.orientation = .horizontal
+    row.spacing = 8
+    row.alignment = .centerY
+    var buttons: [Int: NavBarButton] = [:]
+    var run: [NavBarButton] = []
+
+    func closeRun() {
+      guard !run.isEmpty else { return }
+      let pill = NavPillView(frame: .zero)
+      let inner = NSStackView(views: run)
+      inner.orientation = .horizontal
+      inner.spacing = 0
+      inner.translatesAutoresizingMaskIntoConstraints = false
+      pill.addSubview(inner)
+      NSLayoutConstraint.activate([
+        inner.leadingAnchor.constraint(equalTo: pill.leadingAnchor, constant: 3),
+        inner.trailingAnchor.constraint(equalTo: pill.trailingAnchor, constant: -3),
+        inner.topAnchor.constraint(equalTo: pill.topAnchor, constant: 3),
+        inner.bottomAnchor.constraint(equalTo: pill.bottomAnchor, constant: -3),
+      ])
+      row.addArrangedSubview(pill)
+      run = []
+    }
+
+    for i in 0..<actions.count {
+      if !actions.spacer(i).isEmpty {
+        closeRun()
+        continue
+      }
+      let b = makeButton(actions, i)
+      b.tag = i
+      b.target = self
+      b.action = action
+      b.menuItems = actions.menu(i)
+      b.setBadge(actions.badge(i), color: optionalColor(actions.badgeColor(i)))
+      buttons[i] = b
+      run.append(b)
+    }
+    closeRun()
+    return (row, buttons)
+  }
+
+  private func makeButton(_ a: BarActions, _ i: Int) -> NavBarButton {
+    let b = NavBarButton(frame: .zero)
+    b.translatesAutoresizingMaskIntoConstraints = false
+    let color = optionalColor(a.tint(i)) ?? tint ?? NSColor.labelColor
+    b.contentTintColor = color
+
+    var hasImage = false
+    if !a.asset(i).isEmpty, let image = assetImage(a.asset(i)) {
+      image.size = NSSize(width: 18, height: 18)
+      b.image = image
+      hasImage = true
+    } else if !a.icon(i).isEmpty,
+      let image = NSImage(systemSymbolName: a.icon(i), accessibilityDescription: a.label(i))
+    {
+      let size = a.iconSize(i) > 0 ? min(a.iconSize(i), 20) : 15
+      b.image = image.withSymbolConfiguration(.init(pointSize: size, weight: .medium))
+      hasImage = true
+    }
+
+    if hasImage {
+      b.imagePosition = .imageOnly
+      b.toolTip = a.label(i).isEmpty ? nil : a.label(i)
+      NSLayoutConstraint.activate([
+        b.widthAnchor.constraint(equalToConstant: 28 + a.padding(i) * 2),
+        b.heightAnchor.constraint(equalToConstant: 28),
+      ])
+    } else {
+      let font = NSFont.systemFont(ofSize: a.labelSize(i) > 0 ? a.labelSize(i) : 13, weight: .medium)
+      b.attributedTitle = NSAttributedString(
+        string: a.label(i), attributes: [.font: font, .foregroundColor: color])
+      let w = (a.label(i) as NSString).size(withAttributes: [.font: font]).width
+      NSLayoutConstraint.activate([
+        b.widthAnchor.constraint(equalToConstant: w + 20 + a.padding(i) * 2),
+        b.heightAnchor.constraint(equalToConstant: 28),
+      ])
+    }
+    return b
+  }
+
+  private func assetImage(_ asset: String) -> NSImage? {
+    let key = registrar.lookupKey(forAsset: asset)
+    for bundle in [Bundle.main] + Bundle.allFrameworks {
+      if let url = bundle.url(forResource: key, withExtension: nil),
+        let image = NSImage(contentsOf: url)
+      {
+        return image
+      }
+    }
+    return nil
+  }
+
+  private func applyBadges(_ args: [String: Any]) {
+    func apply(_ buttons: [Int: NavBarButton], _ values: [String], _ colors: [NSNumber]) {
+      for (i, b) in buttons where i < values.count {
+        b.setBadge(values[i], color: i < colors.count ? optionalColor(colors[i]) : nil)
+      }
+    }
+    apply(leadingButtons,
+          (args["leadingBadgeValues"] as? [String]) ?? [],
+          (args["leadingBadgeColors"] as? [NSNumber]) ?? [])
+    apply(trailingButtons,
+          (args["trailingBadgeValues"] as? [String]) ?? [],
+          (args["trailingBadgeColors"] as? [NSNumber]) ?? [])
+  }
+
+  // MARK: Taps
+
+  @objc private func leadingTapped(_ sender: NavBarButton) {
+    if let items = leadingMenus[sender.tag] {
+      showMenu(items, from: sender, location: "leading")
+    } else {
+      channel.invokeMethod("leadingTapped", arguments: ["index": sender.tag])
+    }
+  }
+
+  @objc private func middleTapped(_ sender: NavBarButton) {
     channel.invokeMethod("middleTapped", arguments: ["index": sender.tag])
   }
 
-  @objc private func trailingTapped(_ sender: NSButton) {
-    channel.invokeMethod("trailingTapped", arguments: ["index": sender.tag])
-  }
-  
-  private func createButtonGroup(
-    icons: [String],
-    labels: [String],
-    paddings: [Double],
-    imageAssets: [String] = [],
-    pillHeight: Double?,
-    tint: NSColor?,
-    tints: [Int] = [],
-    target: Any?,
-    action: Selector
-  ) -> NSView {
-    let count = max(icons.count, labels.count)
-    if count == 0 { return NSView(frame: .zero) }
-    
-    // Use custom pill height if provided, otherwise calculate from padding
-    let customHeight = pillHeight != nil ? CGFloat(pillHeight!) : nil
-    
-    // Calculate widths and paddings
-    var buttonWidths: [CGFloat] = []
-    var buttonPaddings: [NSEdgeInsets] = []
-    let defaultWidth: CGFloat = 28
-    let defaultHeight: CGFloat = 24
-    
-    for i in 0..<count {
-      let padding = i < paddings.count ? CGFloat(paddings[i]) : 0
-      buttonWidths.append(defaultWidth + padding * 2)
-      buttonPaddings.append(NSEdgeInsets(top: padding, left: padding, bottom: padding, right: padding))
-    }
-    
-    let totalWidth = buttonWidths.reduce(0, +) + 8  // +8 for container padding
-    
-    // Calculate the blur view height - use custom height if provided, otherwise calculate from padding
-    let blurViewHeight: CGFloat
-    if let customHeight = customHeight {
-      blurViewHeight = customHeight
+  @objc private func trailingTapped(_ sender: NavBarButton) {
+    if let items = trailingMenus[sender.tag] {
+      showMenu(items, from: sender, location: "trailing")
     } else {
-      let maxPadding = buttonPaddings.map { $0.top + $0.bottom }.max() ?? 0
-      blurViewHeight = defaultHeight + maxPadding + 8  // +8 for container padding
+      channel.invokeMethod("trailingTapped", arguments: ["index": sender.tag])
     }
-    
-    // Create pill background view - all pills are identical and transparent
-    let pillView = NSView(frame: .zero)
-    pillView.wantsLayer = true
-    pillView.layer?.backgroundColor = NSColor.clear.cgColor
-    pillView.layer?.cornerRadius = blurViewHeight / 2
-    pillView.layer?.masksToBounds = true
-    
-    pillView.translatesAutoresizingMaskIntoConstraints = false
-    
-    // Create a container view to hold both pill background and content
-    let containerView = NSView()
-    containerView.wantsLayer = false
-    containerView.translatesAutoresizingMaskIntoConstraints = false
-    containerView.addSubview(pillView)
-    
-    // Selection indicator removed
-    
-    // Create stack view for buttons
-    let stackView = NSStackView()
-    stackView.orientation = .horizontal
-    stackView.spacing = 0
-    stackView.distribution = .fill
-    stackView.translatesAutoresizingMaskIntoConstraints = false
-    
-    // Create buttons
-    var buttons: [NSButton] = []
-    for i in 0..<count {
-      let button = NSButton(frame: .zero)
-      button.tag = i
-      button.target = target
-      button.action = action
-      button.bezelStyle = .texturedRounded
-      button.isBordered = false
-      
-      if i < imageAssets.count, !imageAssets[i].isEmpty {
-        let key = registrar.lookupKey(forAsset: imageAssets[i])
-        if let url = Bundle.main.url(forResource: key, withExtension: nil),
-           let image = NSImage(contentsOf: url) {
-          image.size = NSSize(width: 16, height: 16)
-          let hasTint = (i < tints.count && tints[i] != 0) || tint != nil
-          if hasTint {
-            image.isTemplate = true
-          }
-          button.image = image
-          button.imagePosition = .imageOnly
-        }
-      } else if #available(macOS 11.0, *), i < icons.count, !icons[i].isEmpty,
-         let image = NSImage(systemSymbolName: icons[i], accessibilityDescription: nil) {
-        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
-        button.image = image.withSymbolConfiguration(config)
-        button.imagePosition = .imageOnly
-      } else if i < labels.count, !labels[i].isEmpty {
-        button.title = labels[i]
-      }
-      
-      // Apply individual tint color if available, otherwise use global tint
-      if i < tints.count && tints[i] != 0 {
-        button.contentTintColor = NSColor(argb: tints[i])
-      } else if let tintColor = tint {
-        button.contentTintColor = tintColor
-      }
-      
-      // Ensure button has no background - only the pill blur view should show
-      button.wantsLayer = true
-      button.layer?.backgroundColor = NSColor.clear.cgColor
-      
-      // For NSButton, padding affects the overall button size
-      // NSButton doesn't have contentEdgeInsets like UIButton
-      
-      button.translatesAutoresizingMaskIntoConstraints = false
-      stackView.addArrangedSubview(button)
-      buttons.append(button)
-      
-      // Calculate button height - use custom height if provided, otherwise use default + padding
-      let buttonHeight: CGFloat
-      if let customHeight = customHeight {
-        // Subtract container padding to fit within blur view
-        buttonHeight = customHeight - 8
-      } else {
-        buttonHeight = defaultHeight + buttonPaddings[i].top + buttonPaddings[i].bottom
-      }
-      
-      NSLayoutConstraint.activate([
-        button.widthAnchor.constraint(equalToConstant: buttonWidths[i]),
-        button.heightAnchor.constraint(equalToConstant: buttonHeight),
-      ])
-    }
-    
-    containerView.addSubview(stackView)  // Add to container, not blurView
-    
-    // Store button references (selection view removed)
-    objc_setAssociatedObject(containerView, "buttons", buttons, .OBJC_ASSOCIATION_RETAIN)
-    objc_setAssociatedObject(containerView, "buttonWidths", buttonWidths, .OBJC_ASSOCIATION_RETAIN)
-    
-    NSLayoutConstraint.activate([
-      // Pill view fills the container
-      pillView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-      pillView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-      pillView.topAnchor.constraint(equalTo: containerView.topAnchor),
-      pillView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-      
-      // Stack view positioned within container with padding
-      stackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 4),
-      stackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -4),
-      stackView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 4),
-      stackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -4),
-      
-      // Container size
-      containerView.heightAnchor.constraint(equalToConstant: blurViewHeight),
-      containerView.widthAnchor.constraint(equalToConstant: totalWidth),
-    ])
-    
-    // Mouse tracking removed - no selection highlighting
-    
-    // Wrap in a centering container for vertical centering in toolbar
-    let wrapperView = NSView()
-    wrapperView.translatesAutoresizingMaskIntoConstraints = false
-    wrapperView.addSubview(containerView)
-    
-    NSLayoutConstraint.activate([
-      containerView.centerYAnchor.constraint(equalTo: wrapperView.centerYAnchor),
-      containerView.leadingAnchor.constraint(equalTo: wrapperView.leadingAnchor),
-      containerView.trailingAnchor.constraint(equalTo: wrapperView.trailingAnchor),
-      containerView.topAnchor.constraint(greaterThanOrEqualTo: wrapperView.topAnchor),
-      containerView.bottomAnchor.constraint(lessThanOrEqualTo: wrapperView.bottomAnchor),
-    ])
-    
-    return wrapperView  // Return wrapper for proper vertical centering
   }
 
-  private static func colorFromARGB(_ argb: Int) -> NSColor {
-    let a = CGFloat((argb >> 24) & 0xFF) / 255.0
-    let r = CGFloat((argb >> 16) & 0xFF) / 255.0
-    let g = CGFloat((argb >> 8) & 0xFF) / 255.0
-    let b = CGFloat(argb & 0xFF) / 255.0
-    return NSColor(srgbRed: r, green: g, blue: b, alpha: a)
+  @objc private func titleTapped() {
+    channel.invokeMethod("titleTapped", arguments: nil)
+  }
+
+  // MARK: Menus
+
+  /// Builds an NSMenu from the serialized popup entries. Every entry —
+  /// dividers and submenu parents included — takes one flat depth-first
+  /// index, parent before children, matching the iOS bar and the Dart side.
+  private func showMenu(_ items: [[String: Any]], from button: NSButton, location: String) {
+    var flat = 0
+    func build(_ entries: [[String: Any]]) -> NSMenu {
+      let menu = NSMenu()
+      menu.autoenablesItems = false
+      for e in entries {
+        let type = e["type"] as? String ?? "item"
+        let label = e["label"] as? String ?? ""
+        var image: NSImage? = nil
+        if let name = e["icon"] as? String, !name.isEmpty {
+          image = NSImage(systemSymbolName: name, accessibilityDescription: nil)
+        }
+        switch type {
+        case "divider":
+          flat += 1
+          menu.addItem(.separator())
+        case "submenu":
+          flat += 1
+          let parent = NSMenuItem(title: label, action: nil, keyEquivalent: "")
+          parent.image = image
+          parent.submenu = build(e["children"] as? [[String: Any]] ?? [])
+          menu.addItem(parent)
+        default:
+          let item = NSMenuItem(title: label, action: #selector(menuChosen(_:)), keyEquivalent: "")
+          item.target = self
+          item.image = image
+          item.isEnabled = e["enabled"] as? Bool ?? true
+          item.state = (e["selected"] as? Bool ?? false) ? .on : .off
+          if #available(macOS 14.4, *), let sub = e["subtitle"] as? String, !sub.isEmpty {
+            item.subtitle = sub
+          }
+          item.representedObject = [
+            "location": location, "actionIndex": button.tag, "menuIndex": flat,
+          ] as [String: Any]
+          flat += 1
+          menu.addItem(item)
+        }
+      }
+      return menu
+    }
+    build(items).popUp(
+      positioning: nil,
+      at: NSPoint(x: 0, y: button.isFlipped ? button.bounds.height + 4 : -4),
+      in: button)
+  }
+
+  @objc private func menuChosen(_ sender: NSMenuItem) {
+    guard let info = sender.representedObject as? [String: Any] else { return }
+    channel.invokeMethod("popupMenuSelected", arguments: info)
   }
 }
