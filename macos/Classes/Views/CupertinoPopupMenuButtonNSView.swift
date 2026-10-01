@@ -3,7 +3,7 @@ import Cocoa
 
 class CupertinoPopupMenuButtonNSView: NSView {
   private let channel: FlutterMethodChannel
-  private let button: NSButton
+  private let button: FirstClickButton
   private var popupMenu: NSMenu = NSMenu()
   private var labels: [String] = []
   private var symbols: [String] = []
@@ -17,7 +17,7 @@ class CupertinoPopupMenuButtonNSView: NSView {
 
   init(viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
     self.channel = FlutterMethodChannel(name: "CupertinoNativePopupMenuButton_\(viewId)", binaryMessenger: messenger)
-    self.button = NSButton(title: "", target: nil, action: nil)
+    self.button = FirstClickButton(title: "", target: nil, action: nil)
     super.init(frame: .zero)
 
     var title: String? = nil
@@ -250,6 +250,11 @@ class CupertinoPopupMenuButtonNSView: NSView {
 
   required init?(coder: NSCoder) { return nil }
 
+  // A click in an app that is not already the key window — or the first
+  // click after one — must still open the menu, as the nav bar's buttons do;
+  // without these the ⋯ menus looked dead on the Mac (2026-10-01).
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
   @objc private func onButtonPressed(_ sender: NSButton) {
     let location = NSPoint(x: 0, y: sender.bounds.height)
     popupMenu.popUp(positioning: nil, at: location, in: sender)
@@ -325,6 +330,11 @@ class CupertinoPopupMenuButtonNSView: NSView {
     let b = CGFloat(argb & 0xFF) / 255.0
     return NSColor(srgbRed: r, green: g, blue: b, alpha: a)
   }
+}
+
+/// An NSButton that takes the first click (see acceptsFirstMouse above).
+final class FirstClickButton: NSButton {
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 private extension NSImage {
