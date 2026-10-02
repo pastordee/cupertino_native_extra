@@ -123,7 +123,7 @@ class CNHinge {
   /// Updates as the device folds, unfolds or rotates. A single value of
   /// [CNHinge.none] anywhere without a hinge.
   static Stream<CNHinge> watch() {
-    if (defaultTargetPlatform != TargetPlatform.iOS) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
       return Stream<CNHinge>.value(none);
     }
     return const EventChannel('cupertino_native/hinge')
@@ -134,7 +134,7 @@ class CNHinge {
 
   /// The state now.
   static Future<CNHinge> current() async {
-    if (defaultTargetPlatform != TargetPlatform.iOS) return none;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return none;
     try {
       return _decode(
         await const MethodChannel('cupertino_native/hinge_query')

@@ -161,8 +161,9 @@ class _CNSliderState extends State<CNSlider> {
   @override
   Widget build(BuildContext context) {
     // Fallback to Flutter Slider on unsupported platforms.
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
+    if (kIsWeb ||
+        !(defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
       return SizedBox(
         height: widget.height,
         width: double.infinity,

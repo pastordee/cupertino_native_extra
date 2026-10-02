@@ -109,8 +109,9 @@ class _CNSegmentedControlState extends State<CNSegmentedControl> {
 
   @override
   Widget build(BuildContext context) {
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
+    if (kIsWeb ||
+        !(defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
       return SizedBox(
         height: widget.height,
         child: CupertinoSegmentedControl<int>(

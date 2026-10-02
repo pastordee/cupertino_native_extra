@@ -125,8 +125,9 @@ class _CNPullDownButtonAnchorState extends State<CNPullDownButtonAnchor> {
 
   @override
   Widget build(BuildContext context) {
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
+    if (kIsWeb ||
+        !(defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
       // Fallback Flutter implementation
       return SizedBox(
         height: widget.height,

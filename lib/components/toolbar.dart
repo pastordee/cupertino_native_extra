@@ -341,8 +341,9 @@ class _CNToolbarState extends State<CNToolbar> {
 
   @override
   Widget build(BuildContext context) {
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
+    if (kIsWeb ||
+        !(defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
       // Fallback for non-Apple platforms
       return CupertinoNavigationBar(
         leading: widget.leading != null && widget.leading!.isNotEmpty

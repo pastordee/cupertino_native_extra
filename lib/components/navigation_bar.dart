@@ -612,8 +612,9 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
         widget.segmentedControlLabels != null &&
         widget.segmentedControlLabels!.isNotEmpty;
 
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
+    if (kIsWeb ||
+        !(defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
       // Fallback for non-Apple platforms
       Widget? middle;
       if (hasSegmentedControl) {

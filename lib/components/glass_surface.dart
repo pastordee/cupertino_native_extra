@@ -230,7 +230,7 @@ class _CNGlassSurfaceState extends State<CNGlassSurface> {
 
   @override
   Widget build(BuildContext context) {
-    if (defaultTargetPlatform != TargetPlatform.iOS) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
       return const SizedBox.shrink();
     }
     final view = UiKitView(

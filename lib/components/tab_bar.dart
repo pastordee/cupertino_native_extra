@@ -301,8 +301,9 @@ class _CNTabBarState extends State<CNTabBar> {
 
   @override
   Widget build(BuildContext context) {
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
+    if (kIsWeb ||
+        !(defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
       // Simple Flutter fallback using CupertinoTabBar for non-Apple platforms.
       return SizedBox(
         height: widget.height,

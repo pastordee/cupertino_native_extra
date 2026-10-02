@@ -117,8 +117,9 @@ class _CNSwitchState extends State<CNSwitch> {
   @override
   Widget build(BuildContext context) {
     // Fallback to Flutter Switch on unsupported platforms.
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
+    if (kIsWeb ||
+        !(defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
       return SizedBox(
         height: widget.height,
         child: Switch(

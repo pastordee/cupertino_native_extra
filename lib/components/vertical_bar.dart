@@ -22,7 +22,7 @@ enum CNVerticalBarEdge { none, leading, trailing }
 /// change (`WidgetsBindingObserver.didChangeMetrics`). Anywhere but iOS, and on
 /// iOS before 27.1, the answer is [CNVerticalBarEdge.none].
 Future<CNVerticalBarEdge> cnVerticalBarEdge() async {
-  if (defaultTargetPlatform != TargetPlatform.iOS) {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
     return CNVerticalBarEdge.none;
   }
   try {
@@ -286,7 +286,7 @@ class _CNVerticalBarState extends State<CNVerticalBar> {
   @override
   Widget build(BuildContext context) {
     final Size size = Size(widget.width, widget.height);
-    if (defaultTargetPlatform != TargetPlatform.iOS) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
       return SizedBox.fromSize(size: size, child: _fallback(context));
     }
     final params = _params();
