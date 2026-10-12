@@ -82,6 +82,8 @@ private final class NavPillView: NSView {
   override init(frame: NSRect) {
     super.init(frame: frame)
     wantsLayer = true
+    // A button's count badge may reach past the capsule's edge.
+    if #available(macOS 14.0, *) { clipsToBounds = false }
   }
   required init?(coder: NSCoder) { return nil }
   override var wantsUpdateLayer: Bool { true }
@@ -115,6 +117,8 @@ private final class NavBarButton: NSButton {
     wantsLayer = true
     layer?.cornerRadius = 14
     focusRingType = .none
+    // A count hangs off the corner; it must not be cut off at the edge.
+    if #available(macOS 14.0, *) { clipsToBounds = false }
   }
   required init?(coder: NSCoder) { return nil }
 
@@ -184,9 +188,19 @@ private final class NavBarButton: NSButton {
 
   private func layoutBadge() {
     guard let b = badgeView else { return }
+    // NSButton is flipped: y = 0 is the top edge.
+    if b.stringValue.trimmingCharacters(in: .whitespaces).isEmpty {
+      // A plain "something new" dot: small, and inset far enough to clear the
+      // pill's rounded end (a capsule clips its corners). Hung off
+      // the corner like a count, the pill's rounded edge cut it down to a
+      // sliver (owner, 2026-10-12).
+      let d: CGFloat = 8
+      b.frame = NSRect(x: bounds.width - d - 6, y: 4, width: d, height: d)
+      b.layer?.cornerRadius = d / 2
+      return
+    }
     let h: CGFloat = 14
     let w = max(h, b.intrinsicContentSize.width + 6)
-    // NSButton is flipped: y = 0 is the top edge.
     b.frame = NSRect(x: bounds.width - w + 3, y: -2, width: w, height: h)
     b.layer?.cornerRadius = h / 2
   }
