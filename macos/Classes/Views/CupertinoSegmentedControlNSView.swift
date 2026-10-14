@@ -23,6 +23,7 @@ class CupertinoSegmentedControlNSView: NSView {
     var selectedIndex: Int = -1
     var enabled: Bool = true
     var isDark: Bool = false
+    var tint: NSColor? = nil
 
     if let dict = args as? [String: Any] {
       if let arr = dict["labels"] as? [String] { labels = arr }
@@ -38,6 +39,7 @@ class CupertinoSegmentedControlNSView: NSView {
         if let mode = style["iconRenderingMode"] as? String { self.defaultIconRenderingMode = mode }
         if let g = style["iconGradientEnabled"] as? NSNumber { self.defaultIconGradientEnabled = g.boolValue }
         if let s = style["labelSize"] as? NSNumber { self.labelSize = CGFloat(truncating: s) }
+        if let t = style["tint"] as? NSNumber { tint = Self.colorFromARGB(t.intValue) }
       }
     }
 
@@ -52,6 +54,9 @@ class CupertinoSegmentedControlNSView: NSView {
     configureSegments()
     if selectedIndex >= 0 { control.selectedSegment = selectedIndex }
     control.isEnabled = enabled
+    // The selected segment in the app's colour when it asks for one, rather
+    // than the system accent (owner, 2026-10-14: a blue "Man" among red).
+    if let tint { control.selectedSegmentBezelColor = tint }
 
     control.target = self
     control.action = #selector(onChanged(_:))
@@ -85,6 +90,9 @@ class CupertinoSegmentedControlNSView: NSView {
         if let args = call.arguments as? [String: Any] {
           if let s = args["iconSize"] as? NSNumber { self.defaultIconSize = CGFloat(truncating: s) }
           if let s = args["labelSize"] as? NSNumber { self.labelSize = CGFloat(truncating: s) }
+          if let t = args["tint"] as? NSNumber {
+            self.control.selectedSegmentBezelColor = Self.colorFromARGB(t.intValue)
+          }
           self.configureSegments()
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing style", details: nil)) }
