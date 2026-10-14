@@ -14,8 +14,8 @@ dependencies:
     sdk: flutter
   # The design widgets now live outside the SDK; see
   # package:cupertino_ui / package:material_ui.
-  cupertino_ui: ^1.0.1
-  material_ui: ^1.1.0
+  cupertino_ui: ^1.1.2
+  material_ui: ^1.6.0
   plugin_platform_interface: ^2.0.2
 
 dev_dependencies:
