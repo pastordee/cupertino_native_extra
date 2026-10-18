@@ -54,6 +54,9 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
   /// title in place instead of being rebuilt.
   private var clickableTitleButton: UIButton?
   private var clickableTitleAttributes: [NSAttributedString.Key: Any] = [:]
+  /// Draw the title on a glass capsule, like the bar's button items, so it
+  /// stays readable over content scrolling behind a transparent bar.
+  private var titleGlass = false
   /// Width constraint on the scrolling segmented-control title, and the width
   /// that control would take if nothing constrained it.
   private var segmentedTitleWidthConstraint: NSLayoutConstraint?
@@ -178,6 +181,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     var title: String = ""
     var titleSize: Double = 0
     var titleClickable: Bool = false
+    var titleGlassArg: Bool = false
     var leadingBadgeValues: [String] = []
     var leadingBadgeColors: [Int] = []
     var middleIcons: [String] = []
@@ -207,6 +211,7 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       title = (dict["title"] as? String) ?? ""
       titleSize = (dict["titleSize"] as? Double) ?? 0
       titleClickable = (dict["titleClickable"] as? Bool) ?? false
+      titleGlassArg = (dict["titleGlass"] as? Bool) ?? false
       collapsingTitle = (dict["collapsingLargeTitle"] as? Bool) ?? false
       leadingBadgeValues = (dict["leadingBadgeValues"] as? [String]) ?? []
       leadingBadgeColors = (dict["leadingBadgeColors"] as? [Int]) ?? []
@@ -664,7 +669,27 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
       navigationItem.titleView = containerView
       navigationItem.title = nil
     } else if !title.isEmpty {
-      if titleClickable {
+      titleGlass = titleGlassArg
+      if titleGlass, #available(iOS 15.0, *) {
+        // Same capsule the bar's buttons sit in (glass on iOS 26, a blur
+        // before it). A button even when not tappable, so the title can be
+        // updated in place the same way.
+        var titleAttributes: [NSAttributedString.Key: Any] = [
+          .font: UIFont.systemFont(
+            ofSize: titleSize > 0 ? CGFloat(titleSize) : 17, weight: .semibold),
+        ]
+        if let tintColor = tint { titleAttributes[.foregroundColor] = tintColor }
+        let titleButton = makeGlassTitleButton(title, attributes: titleAttributes)
+        if titleClickable {
+          titleButton.addTarget(self, action: #selector(titleTapped), for: .touchUpInside)
+        } else {
+          titleButton.isUserInteractionEnabled = false
+        }
+        navigationItem.titleView = titleButton
+        navigationItem.title = nil
+        clickableTitleButton = titleButton
+        clickableTitleAttributes = titleAttributes
+      } else if titleClickable {
         // Create a clickable title button
         let titleButton = UIButton(type: .system)
         titleButton.setTitle(title, for: .normal)
@@ -815,6 +840,10 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
             self.smallTitleLabel.text = title
             self.smallTitleLabel.sizeToFit()
             self.layoutLargeTitle()
+          } else if let button = self.clickableTitleButton,
+                    self.navigationItem.titleView === button,
+                    self.titleGlass, #available(iOS 15.0, *) {
+            self.setGlassTitle(button, title, attributes: self.clickableTitleAttributes)
           } else if let button = self.clickableTitleButton,
                     self.navigationItem.titleView === button {
             button.setAttributedTitle(
@@ -1429,6 +1458,41 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     channel.invokeMethod("trailingTapped", arguments: ["index": index])
   }
   
+  /// A title on a capsule matching the bar's button items: Liquid Glass on
+  /// iOS 26, a system-material blur before it.
+  @available(iOS 15.0, *)
+  private func makeGlassTitleButton(
+    _ title: String, attributes: [NSAttributedString.Key: Any]
+  ) -> UIButton {
+    var config: UIButton.Configuration
+    if #available(iOS 26.0, *) {
+      config = .glass()
+    } else {
+      config = .plain()
+      config.background.visualEffect = UIBlurEffect(style: .systemThinMaterial)
+    }
+    config.cornerStyle = .capsule
+    config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+    config.titleLineBreakMode = .byTruncatingTail
+    let button = UIButton(configuration: config)
+    if let color = attributes[.foregroundColor] as? UIColor { button.tintColor = color }
+    setGlassTitle(button, title, attributes: attributes)
+    return button
+  }
+
+  @available(iOS 15.0, *)
+  private func setGlassTitle(
+    _ button: UIButton, _ title: String, attributes: [NSAttributedString.Key: Any]
+  ) {
+    guard var config = button.configuration else { return }
+    var text = AttributedString(title)
+    if let font = attributes[.font] as? UIFont { text.font = font }
+    if let color = attributes[.foregroundColor] as? UIColor { text.foregroundColor = color }
+    config.attributedTitle = text
+    button.configuration = config
+    button.sizeToFit()
+  }
+
   @objc private func titleTapped() {
     channel.invokeMethod("titleTapped", arguments: [:])
   }

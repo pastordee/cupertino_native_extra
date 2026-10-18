@@ -332,6 +332,7 @@ class CNNavigationBar extends StatefulWidget {
     this.title,
     this.titleSize,
     this.onTitlePressed,
+    this.titleGlass = false,
     this.trailing,
     this.largeTitle = false,
     this.transparent = true,
@@ -375,6 +376,7 @@ class CNNavigationBar extends StatefulWidget {
     this.title,
     this.titleSize,
     this.onTitlePressed,
+    this.titleGlass = false,
     this.trailing,
     required this.searchConfig,
     this.largeTitle = false,
@@ -423,6 +425,7 @@ class CNNavigationBar extends StatefulWidget {
     this.title,
     this.titleSize,
     this.onTitlePressed,
+    this.titleGlass = false,
     this.trailing,
     required this.scrollableContent,
     this.largeTitle = true,
@@ -456,6 +459,11 @@ class CNNavigationBar extends StatefulWidget {
   /// Callback when the title is tapped.
   /// If null, the title is not clickable.
   final VoidCallback? onTitlePressed;
+
+  /// Draw the title on a glass capsule like the bar's button items (Liquid
+  /// Glass on iOS 26, a blur before it), so it stays readable over content
+  /// scrolling behind a transparent bar.
+  final bool titleGlass;
 
   /// Trailing actions (buttons/icons on the right).
   /// For search-enabled navigation bar, search button is added automatically.
@@ -651,6 +659,7 @@ class _CNNavigationBarState extends State<CNNavigationBar> {
       'title': effectiveTitle,
       'titleSize': widget.titleSize ?? 0.0,
       'titleClickable': widget.onTitlePressed != null && !hasSegmentedControl,
+      'titleGlass': widget.titleGlass,
       ..._actionParams(),
       'largeTitle': widget.largeTitle,
       'collapsingLargeTitle': widget.largeTitleScrollController != null,
