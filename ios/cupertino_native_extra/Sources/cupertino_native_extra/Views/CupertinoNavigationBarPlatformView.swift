@@ -1590,7 +1590,10 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     // Calculate widths and paddings
     var buttonWidths: [CGFloat] = []
     var buttonPaddings: [UIEdgeInsets] = []
-    let defaultWidth: CGFloat = 36
+    // 28 (was 36): with 10 pt icons the 36 pt slot left wide gaps between
+    // app-bar buttons — the owner wants them tight (2026-10-18). Height stays
+    // 36, so the bar and its pill keep their size.
+    let defaultWidth: CGFloat = 28
     let defaultHeight: CGFloat = 36
     
     for i in 0..<count {
