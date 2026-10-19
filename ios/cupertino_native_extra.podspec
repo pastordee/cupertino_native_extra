@@ -16,6 +16,7 @@ A new Flutter plugin project.
   s.source_files = 'cupertino_native_extra/Sources/cupertino_native_extra/**/*'
   s.dependency 'Flutter'
   s.platform = :ios, '14.0'
+  s.frameworks = 'AVKit'
 
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }

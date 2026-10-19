@@ -5,6 +5,7 @@ import 'demos/switch.dart';
 import 'demos/segmented_control.dart';
 import 'demos/tab_bar.dart';
 import 'demos/icon.dart';
+import 'demos/airplay_button.dart';
 import 'demos/popup_menu_button.dart';
 import 'demos/popup_menu_demo.dart';
 import 'demos/popup_menu_styles_demo.dart';
@@ -190,6 +191,18 @@ class HomePage extends StatelessWidget {
                 onTap: () {
                   Navigator.of(context).push(
                     CupertinoPageRoute(builder: (_) => const IconDemoPage()),
+                  );
+                },
+              ),
+              CupertinoListTile(
+                title: Text('AirPlay Button'),
+                leading: CNIcon(symbol: CNSymbol('airplayvideo', color: accentColor)),
+                trailing: CupertinoListTileChevron(),
+                onTap: () {
+                  Navigator.of(context).push(
+                    CupertinoPageRoute(
+                      builder: (_) => const AirPlayButtonDemoPage(),
+                    ),
                   );
                 },
               ),

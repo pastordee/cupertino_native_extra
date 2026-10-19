@@ -23,6 +23,7 @@
 /// - [CNSlider] - Native iOS slider with step support
 /// - [CNSwitch] - Native toggle switch
 /// - [CNSegmentedControl] - Native segmented control
+/// - [CNAirPlayButton] - System AirPlay route picker
 ///
 /// ### Menus & Popups
 /// - [CNPopupMenuButton] - Context menu from button
@@ -108,6 +109,7 @@ export 'components/button.dart';
 export 'components/glass_surface.dart';
 export 'components/vertical_bar.dart';
 export 'components/hinge.dart';
+export 'components/airplay_button.dart';
 
 import 'cupertino_native_platform_interface.dart';
 

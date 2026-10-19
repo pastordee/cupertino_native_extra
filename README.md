@@ -131,6 +131,18 @@ const CNIcon(
 )
 ```
 
+### AirPlay Button
+
+The system AirPlay button (`AVRoutePickerView`). Tapping it opens the system route picker, and any `AVPlayer` in the app follows the route chosen. iOS and macOS 10.15+; builds nothing elsewhere.
+
+```dart
+// White over video; filled with the active tint while AirPlaying
+CNAirPlayButton(
+  tint: CupertinoColors.white,
+  activeTint: CupertinoColors.activeBlue,
+)
+```
+
 ### Popup Menu Button
 
 ![Liquid Glass Popup Menu Button](https://github.com/serverpod/cupertino_native/raw/main/misc/screenshots/popup-menu-button.png)

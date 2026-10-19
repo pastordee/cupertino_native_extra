@@ -45,6 +45,9 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
 
     let searchBarFactory = CupertinoSearchBarNSViewFactory(messenger: registrar.messenger)
     registrar.register(searchBarFactory, withId: "CupertinoNativeSearchBar")
+
+    let airPlayButtonFactory = CupertinoAirPlayButtonViewFactory(messenger: registrar.messenger)
+    registrar.register(airPlayButtonFactory, withId: "CupertinoNativeAirPlayButton")
     
     // Initialize action sheet handler
     actionSheetHandler = CupertinoActionSheetHandler(messenger: registrar.messenger)

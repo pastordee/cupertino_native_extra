@@ -72,6 +72,9 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
     let verticalBarFactory = CupertinoVerticalBarFactory(messenger: registrar.messenger())
     registrar.register(verticalBarFactory, withId: "CupertinoNativeVerticalBar")
 
+    let airPlayButtonFactory = CupertinoAirPlayButtonViewFactory(messenger: registrar.messenger())
+    registrar.register(airPlayButtonFactory, withId: "CupertinoNativeAirPlayButton")
+
     hingeHandler = CupertinoHingeHandler(messenger: registrar.messenger())
     
     // Initialize action sheet handler

@@ -2,6 +2,11 @@
 
 All notable changes to the cupertino_native_extra plugin are documented in this file.
 
+## [Unreleased]
+
+### Added
+- `CNAirPlayButton` — the system AirPlay button (`AVRoutePickerView`) as a platform view on iOS and macOS 10.15+, sized like a bar icon (28×28 by default). Options: `tint`, `activeTint` (colour while playing on another device) and `prioritizesVideoDevices` (iOS, on by default). Builds `SizedBox.shrink()` on other platforms.
+
 ## [0.2.4] - 2026-07-21
 
 ### Added
