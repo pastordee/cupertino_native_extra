@@ -1491,6 +1491,24 @@ class CupertinoNavigationBarPlatformView: NSObject, FlutterPlatformView {
     config.attributedTitle = text
     button.configuration = config
     button.sizeToFit()
+    // sizeToFit measures before a new configuration's title is laid out, so
+    // a title set in place came out too narrow and was cut with "…" —
+    // "Mar…" for Mark 8 after Mark 7, most on the iPad (owner, 2026-10-20).
+    // Size it from the text itself (with the capsule's insets), never
+    // smaller than that, and hand it back to the bar to lay out again.
+    let measured = NSAttributedString(string: title, attributes: attributes).boundingRect(
+      with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude),
+      options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).size
+    let insets = config.contentInsets
+    let width = ceil(measured.width) + insets.leading + insets.trailing + 4
+    let height = ceil(measured.height) + insets.top + insets.bottom
+    button.frame.size = CGSize(
+      width: max(button.frame.width, width), height: max(button.frame.height, height))
+    if navigationItem.titleView === button {
+      navigationItem.titleView = nil
+      navigationItem.titleView = button
+      navigationBar.setNeedsLayout()
+    }
   }
 
   @objc private func titleTapped() {
